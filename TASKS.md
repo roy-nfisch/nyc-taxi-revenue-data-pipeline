@@ -28,9 +28,9 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   Local checks passed 34 foundation tests, three reference tests, lint/format,
   and package build. Configuration does not start downloads or Prefect.
 
-- [x] **T03 — Download and stage the files.** Implementation reviewed and accepted
-  on 04.11.2026; delivery is tracked in [PR #3](https://github.com/roy-nfisch/mle-data-pipeline-project/pull/3),
-  not yet merged. `TaxiDownloader` uses shared JSON months/source URL, validates
+- [x] **T03 — Download and stage the files.** Reviewed and merged in
+  [PR #3](https://github.com/roy-nfisch/mle-data-pipeline-project/pull/3).
+  `TaxiDownloader` uses shared JSON months/source URL, validates
   complete Parquet before reuse/publication, preserves old files on failed
   refreshes, and returns input identities for lineage. Safe failure logs and shared
   synthetic fixtures cover HTTP, interruption, corruption, and storage failures.
@@ -41,13 +41,32 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   data job. Latest GitHub checks remain a merge gate, not a claimed result here.
   No revenue outputs have been created.
 
-## To do
+## In progress
 
 - [ ] **T04 — Build the daily calculation.** Apply only approved data rules and
   aggregate `fact_daily_revenue` by pickup day. Generate `dim_date` with a small
   pure helper, not a separate service. Done when small known examples cover
   boundaries, invalid rows, multiple files, exact daily counts/amounts, and the
   90-day calendar without invented zero-revenue fact rows.
+  Implemented for review; report writing and the complete command remain separate.
+  Rules applied:
+  - Read recorded `total_amount` only; sum exact integer cents and return decimal
+    USD values. Sub-cent values fail instead of silently rounding.
+  - Use recorded pickup dates without guessing ambiguous formats or converting
+    timezones. Exclude invalid pickups, out-of-period dates, then invalid amounts;
+    count each exclusion once. Missing required columns or no usable batch fails.
+  - Keep zero/negative amounts and count them. Missing payment type does not
+    exclude an otherwise usable ride. Do not deduplicate similar-looking rides.
+  - Reject repeated resolved file paths; combine dates across different files.
+  - Configure `start_month` and strictly positive integer `duration_months`;
+    derive inclusive start/exclusive end in `ReportingPeriod`. Reject strings,
+    floats, booleans, null, zero, negative durations, and calendar overflow.
+    The calculator receives only this period, not unrelated download settings.
+  - Keep one fact per accepted pickup day; generate every date in the period
+    separately. A missing fact does not become an invented zero-revenue day.
+
+## To do
+
 - [ ] **T05 — Save the report and connect the command.** Compose the objects into
   one local entry point. Done when a temporary-file integration test checks the
   saved fact/date schemas, values, and repeat-run behaviour, including explicit

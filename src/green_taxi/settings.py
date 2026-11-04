@@ -9,7 +9,14 @@ from datetime import date
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    HttpUrl,
+    field_validator,
+    model_validator,
+)
 
 Month = Annotated[str, Field(pattern=r"^[0-9]{4}-(0[1-9]|1[0-2])$")]
 DEFAULT_CONFIG = Path(__file__).with_name("defaults.json")
@@ -22,6 +29,58 @@ def default_source_url() -> str:
     or malformed packaged configuration fails visibly; imports do not read it.
     """
     return json.loads(DEFAULT_CONFIG.read_text(encoding="utf-8"))["source_url"]
+
+
+class ReportingPeriod(BaseModel):
+    """Whole calendar months, with start/end derived rather than separately edited.
+
+    start_month must be YYYY-MM and duration_months a positive integer (not a
+    boolean or numeric string). One month means the entire starting month, not
+    thirty days. Zero and negative durations are invalid, not hidden modes.
+    Derived start is inclusive and end exclusive. Invalid calendar years or an
+    end past year 9999 raise ValidationError. No clock, file, or network is used.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    start_month: Month
+    duration_months: int = Field(strict=True, gt=0)
+
+    @model_validator(mode="after")
+    def ordered_boundaries(self) -> "ReportingPeriod":
+        """Resolve both boundaries now so invalid years fail during validation."""
+        if self.end <= self.start:
+            raise ValueError("Reporting end must be after start.")
+        return self
+
+    @property
+    def start(self) -> date:
+        """Return the first day of start_month, included in the report."""
+        return date.fromisoformat(f"{self.start_month}-01")
+
+    @property
+    def end(self) -> date:
+        """Return the first excluded day using calendar-month arithmetic.
+
+        Derivation handles leap years and December-to-January transitions. It
+        never assumes that a month has thirty days or consults today's date.
+        """
+        index = self.start.year * 12 + self.start.month - 1 + self.duration_months
+        year, month = divmod(index, 12)
+        if year > date.max.year:
+            raise ValueError(
+                "Reporting period extends beyond supported calendar years."
+            )
+        return date(year, month + 1, 1)
+
+    def contains(self, day: date) -> bool:
+        """Return whether day belongs to the start-inclusive/end-exclusive range."""
+        return self.start <= day < self.end
+
+
+def default_reporting_period() -> ReportingPeriod:
+    """Read the agreed reporting dates from packaged JSON, without copying dates."""
+    values = json.loads(DEFAULT_CONFIG.read_text(encoding="utf-8"))
+    return ReportingPeriod.model_validate(values["reporting_period"])
 
 
 class PipelineSettings(BaseModel):
@@ -38,6 +97,9 @@ class PipelineSettings(BaseModel):
         source_url: HTTPS dataset directory, defaulting to packaged JSON. Must
             not contain credentials, a query, or a fragment. Supply only a trusted
             source: syntax validation is not a network access-control policy.
+        reporting_period: Starting month and positive month count from JSON;
+            start-inclusive/end-exclusive dates are derived internally.
+            This is separate from which monthly source files are selected.
 
     Result:
         A settings object with an absolute data_dir and derived raw_dir and
@@ -58,6 +120,7 @@ class PipelineSettings(BaseModel):
     timeout_seconds: float = Field(default=60, gt=0, le=300, allow_inf_nan=False)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     source_url: HttpUrl = Field(default_factory=default_source_url)
+    reporting_period: ReportingPeriod = Field(default_factory=default_reporting_period)
 
     @field_validator("source_url")
     @classmethod

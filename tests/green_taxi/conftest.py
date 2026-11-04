@@ -69,3 +69,27 @@ def staging(tmp_path, parquet_bytes, sample_months):
     response.iter_content.side_effect = lambda **kwargs: iter([b"", parquet_bytes()])
     settings = PipelineSettings(data_dir=tmp_path, months=(sample_months[0],))
     return TaxiDownloader(settings, session), session, response
+
+
+@pytest.fixture
+def reporting_settings(tmp_path):
+    """Use the agreed reporting period; isolate all input files in temporary storage."""
+    return PipelineSettings.from_file(data_dir=tmp_path)
+
+
+@pytest.fixture
+def trip_file(tmp_path):
+    """Return a writer for small real Parquet inputs, not a duplicate course dataset."""
+    import pandas as pd
+
+    def write(name, pickups, amounts):
+        destination = tmp_path / name
+        pd.DataFrame(
+            {
+                "lpep_pickup_datetime": pickups,
+                "total_amount": amounts,
+            }
+        ).to_parquet(destination, index=False)
+        return destination
+
+    return write

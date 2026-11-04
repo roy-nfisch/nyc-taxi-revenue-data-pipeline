@@ -1,6 +1,7 @@
 """Check JSON loading and the terminal entry point without running data work."""
 
 import json
+from datetime import date
 
 import pytest
 from click.testing import CliRunner
@@ -17,6 +18,10 @@ def test_packaged_defaults_are_loaded_without_writes(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     settings = PipelineSettings.from_file()
     assert settings.months == tuple(json.loads(DEFAULT_CONFIG.read_text())["months"])
+    assert (settings.reporting_period.start, settings.reporting_period.end) == (
+        date(2025, 1, 1),
+        date(2025, 4, 1),
+    )
     assert not settings.data_dir.exists()
 
 
@@ -93,3 +98,48 @@ def test_command_reports_config_error(tmp_path):
     result = CliRunner().invoke(main, ["--config", str(config)])
     assert result.exit_code != 0
     assert "Configuration must be a JSON object" in result.output
+
+
+def test_command_loads_custom_period_without_changing_source_months(tmp_path):
+    """Load a nested period through JSON/CLI, keeping source selection separate."""
+    config = tmp_path / "run.json"
+    values = {
+        "months": ["2031-01"],
+        "reporting_period": {"start_month": "2030-12", "duration_months": 2},
+    }
+    config.write_text(json.dumps(values))
+    settings = PipelineSettings.from_file(config, data_dir=tmp_path / "data")
+    assert (settings.reporting_period.start, settings.reporting_period.end) == (
+        date(2030, 12, 1),
+        date(2031, 2, 1),
+    )
+    result = CliRunner().invoke(main, ["--config", str(config)])
+    assert result.exit_code == 0, result.output
+    actual = json.loads(result.output)
+    assert actual["reporting_period"] == values["reporting_period"]
+    assert actual["months"] == values["months"]
+    assert not settings.data_dir.exists()
+
+
+@pytest.mark.parametrize("duration", [0, -1, -2, True, 1.0, "1", None])
+def test_command_rejects_invalid_period_before_any_work(tmp_path, duration):
+    """JSON numbers must be positive integers; invalid periods create no storage."""
+    config = tmp_path / "bad.json"
+    config.write_text(
+        json.dumps(
+            {
+                "months": ["2031-01"],
+                "reporting_period": {
+                    "start_month": "2031-01",
+                    "duration_months": duration,
+                },
+            }
+        )
+    )
+    storage = tmp_path / "data"
+    result = CliRunner().invoke(
+        main, ["--config", str(config), "--data-dir", str(storage)]
+    )
+    assert result.exit_code != 0
+    assert "duration_months" in result.output
+    assert not storage.exists()
