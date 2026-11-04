@@ -49,7 +49,12 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   boundaries, invalid rows, multiple files, exact daily counts/amounts, and the
   90-day calendar without invented zero-revenue fact rows.
   Implemented for review; report writing and the complete command remain separate.
+  Local checks pass 154 application tests, including 53 integration tests rerun
+  with two workers, plus three reference tests, lint/format, and package build.
+  This verifies tiny synthetic inputs, not the later full-data report review.
+
   Rules applied:
+
   - Read recorded `total_amount` only; sum exact integer cents and return decimal
     USD values. Sub-cent values fail instead of silently rounding.
   - Use recorded pickup dates without guessing ambiguous formats or converting
