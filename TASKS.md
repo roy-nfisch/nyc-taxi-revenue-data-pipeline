@@ -27,6 +27,9 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   Design configuration and paths for host and container use, with no hard-coded
   machine paths. Done when imports, a small test, and the first CI check pass;
   no download or server startup at import time.
+  Implementation and local verification are complete; PR CI and owner review
+  remain pending. Includes immutable settings, isolated logging, an installable
+  package, and CI on every branch push and PR. This is not yet marked done.
 - [ ] **T03 — Download and stage the files.** Download the three requested months.
   Done when HTTP failures and interrupted downloads are tested, incomplete files
   cannot be reused as complete files, and valid existing files can be reused.

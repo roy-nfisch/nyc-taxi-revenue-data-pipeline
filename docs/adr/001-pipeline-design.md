@@ -40,7 +40,7 @@ coordinates execution, while the Python objects own the data rules. Local Python
 and container execution must share that logic, not become two implementations.
 An alternative orchestrator would need a documented decision before switching.
 
-Planned layout (not created yet):
+Target layout (settings/logging and their tests now exist; later stages remain planned):
 
 ```text
 src/green_taxi/           settings.py, download.py, revenue.py, report.py, pipeline.py, cli.py
@@ -186,4 +186,4 @@ public release. Retain source attribution and the existing license notice.
   manual-run/rebuild behaviour (04.11.2026 follow-up).
 
 Record later decision changes here. Implementation progress belongs in
-[TASKS.md](../../TASKS.md); no application code has been implemented.
+[TASKS.md](../../TASKS.md). The foundation does not yet run the data pipeline.
