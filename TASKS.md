@@ -70,9 +70,9 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   - Keep one fact per accepted pickup day; generate every date in the period
     separately. A missing fact does not become an invented zero-revenue day.
 
-## In progress
-
-- [ ] **T05 — Save the report and connect the command.** Compose the objects into
+- [x] **T05 — Save the report and connect the command.** Reviewed and merged in
+  [PR #5](https://github.com/roy-nfisch/mle-data-pipeline-project/pull/5).
+  Compose the objects into
   one local entry point. Done when a temporary-file integration test checks the
   saved fact/date schemas, values, and repeat-run behaviour, including explicit
   write failures. Verify unique dates, matching date references, and no row/total
@@ -80,7 +80,7 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   run ID, UTC start/finish times, reporting period, input details, output filenames,
   and row counts. Record code revision/dirty status when available, otherwise
   explicitly unknown. Test that metadata describes the actual inputs and outputs.
-  Implemented for review; not yet committed or approved. Local checks pass 190
+  Completed. Local checks pass 190
   application tests with two workers, three reference tests, lint/format, and
   package build. Tests cover read-back values, reruns, lineage, and staging/write
   failures. Full real-data reconciliation stays in T06.
@@ -89,7 +89,7 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   point, prior-report preservation, and known/unknown Git identity. No new services
   or dependencies; existing objects keep their responsibilities.
 
-## To do
+## In progress
 
 - [ ] **T06 — Run the real data and review the result.** Process all three files;
   account for included/excluded rows and reconcile report totals with accepted rides.
@@ -98,13 +98,29 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   a fresh environment. Record evidence, not just a successful exit status.
   Verify a rebuild from staged inputs produces equivalent tables without doubling
   counts or amounts; run-specific metadata may legitimately differ.
+  Local verification complete for review: 146,486 inputs, 146,475 accepted rides,
+  11 out-of-period exclusions, 90 daily facts/calendar dates, and $3,395,290.56 USD.
+  All daily values reconcile independently; a fresh-environment rebuild preserves
+  tables and totals. Evidence, source identities, and limits are recorded in
+  [the real-data review](docs/data-review.md). No application changes were needed.
+  A [compressed terminal GIF](docs/assets/pipeline-demo.gif) in the README shows
+  the successful real-data summary and sample daily results, with local machine
+  details cropped. The
+  temporary print-only demo script was removed; the standard batch command stays
+  documented in the README.
+  The review includes a repeatable independent calculation and a rebuild check;
+  the documented commands were rerun against the staged real data.
+
+## To do
+
 - [ ] **T07 — Prepare the portfolio and close out.** Update the README with the
   actual file tree, working commands, a small output example, and course reflections.
   Explain why this is batch ETL, how to manually launch/rebuild the reporting
   period, and how to deliberately refresh inputs and trace them through metadata.
   Done when another person can follow the instructions and we have reviewed scope,
   tests, source attribution, and generated files excluded from Git. Closeout waits
-  for T08 and T09, including verified Docker and Prefect commands.
+  for T08 and T09, including verified Docker and Prefect commands, and the final
+  public-release review in T10.
 
 ## Required orchestration and container delivery
 
@@ -124,6 +140,29 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
 T08 and T09 can be developed together once the foundation and pipeline stages
 are ready. Both must pass before final closeout; their numbers do not require
 waiting until after T07 to start container work.
+
+## Final review and public release
+
+- [ ] **T10 — Audit and prepare the project for public release.** After the
+  working pipeline, Docker, and Prefect are verified:
+  - Audit code, data rules, security, tests, and documentation. Keep OOD simple;
+    fix confirmed findings and rerun the checks. Include an independent review
+    with a different model and record any remaining limitations.
+  - Choose a clear project name with the owner, rename the GitHub repository,
+    and update local remotes, links, badges, workflows, and Docker/Prefect
+    references where affected. Verify commands still work after the rename.
+  - Check tracked files and Git history for secrets or private information;
+    review licensing, attribution, and data redistribution. Remove the supplied
+    reference before public release, as planned; keep raw/generated data ignored.
+    Do not rewrite history without separate approval if sensitive content is found.
+  - Make the repository public once release checks pass and verify anonymous
+    access. This does not authorize public service hosting or image publication.
+  - Assess whether the finished project adds value to grossman.engineering
+    alongside King County. Record the recommendation; if agreed, add a short
+    English/German project entry linking to the final repository without repeating
+    its detailed documentation.
+  Done when findings are resolved or clearly documented, the renamed public
+  repository works for a new visitor, and the portfolio decision is recorded.
 
 ## Working agreement
 

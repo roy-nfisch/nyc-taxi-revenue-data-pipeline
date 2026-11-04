@@ -5,10 +5,81 @@ Taxi rides into a daily revenue report. The focus is reliable downloads, clear
 data rules, useful tests, and a process someone else can run.
 
 **Status: the local batch command downloads, calculates, and saves checked reports.**
-Full-data review, Docker, and Prefect delivery are still planned. The accepted
+The [local real-data review](docs/data-review.md) reconciles 146,475 accepted rides
+and $3,395,290.56 in recorded charges across 90 days. Docker and Prefect delivery
+are still planned. The accepted
 data rules, simple OOD plan, and fact/date layout are in
 [ADR 001](docs/adr/001-pipeline-design.md). Docker and Prefect are required.
 Follow our progress in [TASKS.md](TASKS.md).
+
+## See it run
+
+The terminal demo shows the batch results: accepted/excluded ride counts,
+daily revenue, and saved files. Select the animation to open it separately.
+
+<p align="center">
+  <a href="docs/assets/pipeline-demo.gif"><img src="docs/assets/pipeline-demo.gif" width="640" alt="Taxi pipeline run showing accepted rides, daily revenue, and saved reports"></a>
+</p>
+
+Compressed GIF, about 62 KB. The terminal title, prompt, and local paths are cropped.
+The recording used a temporary summary script; the supported batch command is:
+
+```bash
+uv run --locked python -m green_taxi --run
+```
+
+<details>
+<summary>Example run output</summary>
+
+From the recorded demo, including the temporary script's printed summary.
+The standard command prints the logs and metadata path; it does not print the
+extra summary/table below. Local paths are shortened and run IDs replaced with
+`<run-id>` here. Each run gets a new ID, and paths depend on the chosen storage.
+
+```text
+INFO green_taxi.pipeline: Starting run <run-id>
+INFO green_taxi.download: Starting reuse for green_tripdata_2025-01.parquet
+INFO green_taxi.download: Reused green_tripdata_2025-01.parquet (1178451 bytes)
+INFO green_taxi.download: Starting reuse for green_tripdata_2025-02.parquet
+INFO green_taxi.download: Reused green_tripdata_2025-02.parquet (1117474 bytes)
+INFO green_taxi.download: Starting reuse for green_tripdata_2025-03.parquet
+INFO green_taxi.download: Reused green_tripdata_2025-03.parquet (1253510 bytes)
+INFO green_taxi.revenue: Read green_tripdata_2025-01.parquet (48326 rows)
+INFO green_taxi.revenue: Read green_tripdata_2025-02.parquet (46621 rows)
+INFO green_taxi.revenue: Read green_tripdata_2025-03.parquet (51539 rows)
+INFO green_taxi.revenue: Accepted 146475 of 146486 rows
+INFO green_taxi.report: Saved checked report: data/processed/metadata.json
+INFO green_taxi.pipeline: Completed run <run-id>
+data/processed/metadata.json
+
+===== PIPELINE COMPLETED =====
+Rides read:       146,486
+Rides accepted:   146,475
+Rides excluded:   11
+Days reported:    90
+Recorded charges: $3,395,290.56 USD
+
+===== FIRST 10 DAYS =====
+service_date  trip_count daily_revenue
+  2025-01-01        1001      25076.51
+  2025-01-02        1516      34256.83
+  2025-01-03        1525      36517.69
+  2025-01-04        1249      27869.20
+  2025-01-05        1129      25823.69
+  2025-01-06        1541      34049.13
+  2025-01-07        1648      36844.24
+  2025-01-08        1680      37905.12
+  2025-01-09        1868      42532.87
+  2025-01-10        1633      37417.57
+
+===== FILES SAVED =====
+  fact_daily_revenue.parquet
+  fact_daily_revenue.csv
+  dim_date.parquet
+  metadata.json
+```
+
+</details>
 
 ## What we want to demonstrate
 
@@ -79,7 +150,7 @@ execution from the start, not add a separate container-only implementation.
 ```text
 src/green_taxi/       Pipeline objects, configuration, and commands
 tests/               Mirrored tests and shared fixtures
-docs/                Design decisions and data rules
+docs/                Design decisions, data review, and demo media
 .github/workflows/   Automated checks
 solution/            Supplied reference; remove before public release
 README.md            Project overview and run instructions
@@ -276,8 +347,9 @@ the failure and rerun. This is not a multi-file transaction. Run only one proces
 per data directory. A report left after an earlier-stage failure describes its
 previous run, not the failed attempt. Errors exit unsuccessfully.
 
-Tests use tiny temporary inputs and fake HTTP responses. The full real-data
-reconciliation is a separate review, not established by these tests.
+Tests use tiny temporary inputs and fake HTTP responses. The separate
+[real-data review](docs/data-review.md) records the full-data reconciliation and
+fresh-environment rebuild; those results are not established by synthetic tests.
 
 ## Acknowledgements
 
