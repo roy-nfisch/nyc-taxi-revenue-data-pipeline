@@ -54,7 +54,8 @@ object, not a new service. The calculator receives only that period. Its
 class per file. The result container is frozen, but returned tables and counts
 are caller-owned mutable values; the calculator retains no run state.
 
-The thin Click command prints settings; it does not replace Prefect orchestration.
+The thin Click command prints settings by default; --run composes the downloader,
+calculator, and writer for a manual local batch. It does not replace Prefect.
 The public source directory also lives in `defaults.json`; validated settings
 carry it into the downloader. User configuration must be trusted: HTTPS URL syntax
 checks do not provide an SSRF/network access-control boundary. Source credentials,
@@ -68,7 +69,7 @@ coordinates execution, while the Python objects own the data rules. Local Python
 and container execution must share that logic, not become two implementations.
 An alternative orchestrator would need a documented decision before switching.
 
-Target layout (settings/logging/downloading/calculation exist; saving and orchestration remain planned):
+Target layout (local pipeline and report writing exist; orchestration remains planned):
 
 ```text
 src/green_taxi/           settings.py, download.py, revenue.py, report.py, pipeline.py, cli.py
@@ -153,7 +154,8 @@ guarantee that the source covers every journey. Synthetic failure tests remain n
 - Download into a temporary file; check readability and required columns before
   replacing the final staged file. Validate existing files before reusing them.
 - Rebuild the report from the selected inputs rather than append on every run.
-  Validate outputs before replacing prior files. Do not claim a successful run
+  Validate output schemas/counts/money and read staged tables back to compare exact
+  values before replacing prior files. Do not claim a successful run
   if any output write fails; cross-file atomic publication is not promised.
 - Test known totals, period boundaries, invalid values, repeated inputs, and
   aggregation across files. Read saved outputs back in an integration test.
@@ -218,6 +220,8 @@ public release. Retain source attribution and the existing license notice.
   manual-run/rebuild behaviour (04.11.2026 follow-up).
 
 Record later decision changes here. Implementation progress belongs in
-[TASKS.md](../../TASKS.md). The downloader stages raw files only; report generation,
-Docker, and Prefect execution are not implemented yet. Daily calculation now
-returns fact/date tables and row counts in memory; saving belongs to the next task.
+[TASKS.md](../../TASKS.md). The downloader stages raw files only; calculation and
+writing are connected by the explicit --run command. Docker and Prefect execution
+are not implemented yet. Report files stage together, replace individually, and
+publish metadata last. If replacement fails, metadata is removed; the directory
+must be rebuilt before use. Concurrent runs are not supported.

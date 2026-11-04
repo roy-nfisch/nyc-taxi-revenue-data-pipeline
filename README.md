@@ -4,8 +4,8 @@ We are planning a small, object-oriented Python **batch ETL pipeline** that turn
 Taxi rides into a daily revenue report. The focus is reliable downloads, clear
 data rules, useful tests, and a process someone else can run.
 
-**Status: settings, raw-file downloading, and daily calculation are available.**
-Saving reports and connecting the complete pipeline are still planned. The accepted
+**Status: the local batch command downloads, calculates, and saves checked reports.**
+Full-data review, Docker, and Prefect delivery are still planned. The accepted
 data rules, simple OOD plan, and fact/date layout are in
 [ADR 001](docs/adr/001-pipeline-design.md). Docker and Prefect are required.
 Follow our progress in [TASKS.md](TASKS.md).
@@ -43,7 +43,7 @@ Runs will be started manually through Prefect in Docker, with no automatic
 schedule initially. Rebuilding with the same inputs and rules must reproduce
 the reporting tables without doubling the results.
 
-## Planned reporting tables
+## Reporting tables
 
 | Table | What it contains | Saved as |
 |---|---|---|
@@ -53,7 +53,7 @@ the reporting tables without doubling the results.
 The tables connect through `service_date`. Facts hold the measurements; the
 dimension describes the day. Calendar dates without facts do not become invented
 zero-revenue days. See the [layout and diagram](docs/adr/001-pipeline-design.md#fact-and-dimension-layout)
-for fields and checks. Run metadata will record which exact inputs, period,
+for fields and checks. Run metadata records which exact inputs, period,
 and code version produced the outputs, alongside included/excluded counts.
 See [run history and rebuilds](docs/adr/001-pipeline-design.md#run-history-and-rebuilds)
 for the agreed lineage fields and launch behaviour.
@@ -88,7 +88,8 @@ pyproject.toml       Package, dependencies, and tool configuration
 uv.lock              Locked dependency versions
 ```
 
-Report writing, Docker, and Prefect delivery remain planned.
+`TaxiPipeline` connects the downloader, calculator, and `ReportWriter`; each keeps
+its own responsibility. Docker and Prefect delivery remain planned.
 
 ## Setup
 
@@ -233,12 +234,50 @@ months survive a later month's failure and can be reused on retry.
 The `TaxiDownloader` returns `StagedFile` records containing source URLs, filenames,
 sizes, checksums, and whether each file was downloaded or reused. The command
 prints sizes/checksums; saving run metadata belongs to the report-writing stage.
-Checksums identify content, not trusted fares. Row-level rules are not applied yet.
+Checksums identify content, not trusted fares. This download-only command does
+not apply the calculator's row-level rules.
 Use one writer per data directory; concurrent publication is not supported.
 Logs identify the selected file, download/reuse start, successful size, and failures.
 Network failures include exception type, available HTTP status, timeout, and retry
 advice. Raw exception text and source URLs are not logged. Errors still propagate;
 logging does not retry automatically or hide a failed run.
+
+### Run the complete batch
+
+```bash
+uv run --locked python -m green_taxi --run
+# Optional custom configuration or container storage:
+uv run --locked python -m green_taxi --run --config run.json --data-dir ./data
+```
+
+Without `--run`, the command still only prints validated settings. Add `--force`
+with `--run` to deliberately refresh downloads. Otherwise, reruns reuse checked
+raw files and rebuild the reports without appending or doubling totals.
+
+The command prints the saved `metadata.json` path. In ignored `data/processed/`:
+
+| File | What it contains |
+|---|---|
+| `fact_daily_revenue.parquet` | One row per accepted pickup day, with exact decimal revenue and ride count |
+| `fact_daily_revenue.csv` | A readable copy of those facts |
+| `dim_date.parquet` | Every calendar day in the reporting period |
+| `metadata.json` | Run ID, UTC times, resolved period, input URLs/sizes/SHA-256, code revision/dirty status, totals, and output row counts |
+
+Code identity is explicitly `unknown` if no checkout/Git is available. The finish
+timestamp is captured after staging the tables, just before publication. Run IDs,
+times, and download/reuse flags may differ between otherwise equivalent rebuilds.
+
+The writer checks schemas, dates, integer counts, decimal money, and the date join.
+It reads staged Parquet/CSV files back and compares exact values before replacing
+any previous outputs, then publishes metadata last. A staging
+failure preserves the previous report. A failure during replacement may leave
+mixed table versions, but removes success metadata: do not use that bundle; fix
+the failure and rerun. This is not a multi-file transaction. Run only one process
+per data directory. A report left after an earlier-stage failure describes its
+previous run, not the failed attempt. Errors exit unsuccessfully.
+
+Tests use tiny temporary inputs and fake HTTP responses. The full real-data
+reconciliation is a separate review, not established by these tests.
 
 ## Acknowledgements
 

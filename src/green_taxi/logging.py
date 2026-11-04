@@ -21,8 +21,8 @@ def configure_logging(settings: PipelineSettings) -> logging.Logger:
         message. Repeated calls reuse existing handlers rather than add duplicates.
 
     Does not change the root logger or configure logging for other libraries.
-    The current settings-inspection command does not call this function; future
-    pipeline entry points must call it explicitly before emitting run messages.
+    Settings inspection does not call this function; the download command and
+    --run entry point call it explicitly before emitting run messages.
     """
     logger = logging.getLogger("green_taxi")
     logger.setLevel(settings.log_level)

@@ -1,0 +1,56 @@
+"""Verify explicit unknown code provenance instead of inventing a clean revision."""
+
+import subprocess
+
+import pytest
+
+from green_taxi import pipeline
+
+pytestmark = pytest.mark.unit
+
+
+@pytest.mark.parametrize(
+    "failure", [FileNotFoundError(), subprocess.TimeoutExpired("git", 2)]
+)
+def test_unavailable_git_is_explicit(monkeypatch, failure):
+    """Missing Git or a bounded-call timeout permits a run with unknown provenance."""
+
+    def fail(*args, **kwargs):
+        raise failure
+
+    monkeypatch.setattr(subprocess, "run", fail)
+    assert pipeline.code_identity() == {"revision": "unknown", "dirty": "unknown"}
+
+
+def test_wheel_does_not_inspect_callers_repository(monkeypatch, tmp_path):
+    """A package outside a checkout never attributes work to an unrelated cwd."""
+    monkeypatch.setattr(
+        pipeline, "__file__", str(tmp_path / "src/green_taxi/pipeline.py")
+    )
+    assert pipeline.code_identity() == {"revision": "unknown", "dirty": "unknown"}
+
+
+@pytest.mark.parametrize("status, dirty", [("", False), (" M src/example.py\n", True)])
+def test_git_identity_records_revision_and_changes(monkeypatch, status, dirty):
+    """Both Git calls use the package checkout, bounded execution, and real output."""
+    from pathlib import Path
+
+    calls = []
+
+    def run(command, **kwargs):
+        calls.append((command, kwargs))
+        return subprocess.CompletedProcess(
+            command, 0, "abc123\n" if command[1] == "rev-parse" else status
+        )
+
+    monkeypatch.setattr(subprocess, "run", run)
+    assert pipeline.code_identity() == {"revision": "abc123", "dirty": dirty}
+    assert len(calls) == 2
+    for _, options in calls:
+        assert options == {
+            "cwd": Path(pipeline.__file__).resolve().parents[2],
+            "check": True,
+            "capture_output": True,
+            "text": True,
+            "timeout": 2,
+        }

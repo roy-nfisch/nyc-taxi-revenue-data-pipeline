@@ -93,3 +93,41 @@ def trip_file(tmp_path):
         return destination
 
     return write
+
+
+@pytest.fixture
+def calculated_report(reporting_settings, trip_file):
+    """Calculate tiny known totals through the real calculator for writer tests."""
+    from green_taxi.revenue import DailyRevenueCalculator
+
+    path = trip_file(
+        "rides.parquet", [reporting_settings.reporting_period.start] * 2, [0.1, 0.2]
+    )
+    return DailyRevenueCalculator(reporting_settings.reporting_period).calculate([path])
+
+
+@pytest.fixture
+def pipeline_setup(tmp_path, sample_months, parquet_bytes):
+    """Use real stages and tiny HTTP payloads, with no live network or course data."""
+    from green_taxi.pipeline import TaxiPipeline
+    from green_taxi.report import ReportWriter
+    from green_taxi.revenue import DailyRevenueCalculator
+    from green_taxi.settings import ReportingPeriod
+
+    settings = PipelineSettings(
+        months=sample_months,
+        data_dir=tmp_path / "data",
+        reporting_period=ReportingPeriod(
+            start_month=sample_months[0], duration_months=len(sample_months)
+        ),
+    )
+    session = MagicMock()
+    response = session.get.return_value.__enter__.return_value
+    response.iter_content.side_effect = lambda **kwargs: iter([parquet_bytes()])
+    pipeline = TaxiPipeline(
+        settings,
+        TaxiDownloader(settings, session),
+        DailyRevenueCalculator(settings.reporting_period),
+        ReportWriter(settings.processed_dir),
+    )
+    return pipeline, session
