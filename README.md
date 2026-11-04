@@ -4,7 +4,7 @@ We are planning a small, object-oriented Python **batch ETL pipeline** that turn
 Taxi rides into a daily revenue report. The focus is reliable downloads, clear
 data rules, useful tests, and a process someone else can run.
 
-**Status: Python foundation added; the full pipeline is not implemented yet.** The accepted
+**Status: foundation and raw-file downloader added; reporting is not implemented yet.** The accepted
 data rules, simple OOD plan, and fact/date layout are in
 [ADR 001](docs/adr/001-pipeline-design.md). Docker and Prefect are required.
 Follow our progress in [TASKS.md](TASKS.md).
@@ -80,9 +80,12 @@ README.md                         Project goal, scope, and setup
 TASKS.md                          Work and completion checks
 docs/adr/001-pipeline-design.md    Accepted rules, object responsibilities, and table layout
 pyproject.toml / uv.lock          Installable package and locked environment
-src/green_taxi/                   Settings, explicit logging, and settings entry point
+src/green_taxi/settings.py        Validated months, paths, timeouts, and logging level
 src/green_taxi/defaults.json      Default source-month selection, loaded at runtime
-tests/green_taxi/                 Mirrored settings, logging, and import checks
+src/green_taxi/logging.py         Explicit application logging setup
+src/green_taxi/__main__.py        Settings inspection command
+src/green_taxi/download.py        Downloader object, staged-file identity, download command
+tests/green_taxi/                 Mirrored tests and small offline Parquet/HTTP fixtures
 .github/workflows/ci.yml          Feature-branch and PR lint, tests, and build
 solution/                         Supplied reference; remove before public release
 ```
@@ -138,6 +141,33 @@ settings = PipelineSettings.from_file()  # Packaged JSON defaults
 For a future container, `--data-dir /data` overrides JSON storage with a mount.
 Configuration does not create directories. Tests use temporary paths, not our
 real dataset. CI also checks the supplied reference tests separately.
+
+### Download the raw files
+
+From the repository root:
+
+```bash
+uv run --locked python -m green_taxi.download
+```
+
+This downloads January–March 2025 to ignored `data/raw/`. Run it again to reuse
+validated files. To choose one month or use another storage mount:
+
+```bash
+uv run --locked python -m green_taxi.download --month 2025-01 --data-dir ./data
+```
+
+Use `--force` to deliberately refresh selected files. Downloads use temporary
+files, read every Parquet batch, require the pickup/amount columns and at least
+one row, then replace the staged file. Failed refreshes keep the previous file.
+A corrupt existing file stops the run; use `--force` to repair it. Already completed
+months survive a later month's failure and can be reused on retry.
+
+The `TaxiDownloader` returns `StagedFile` records containing source URLs, filenames,
+sizes, checksums, and whether each file was downloaded or reused. The command
+prints sizes/checksums; saving run metadata belongs to the report-writing stage.
+Checksums identify content, not trusted fares. Row-level rules are not applied yet.
+Use one writer per data directory; concurrent publication is not supported.
 
 ## Acknowledgements
 

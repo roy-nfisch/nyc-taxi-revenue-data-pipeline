@@ -48,7 +48,7 @@ coordinates execution, while the Python objects own the data rules. Local Python
 and container execution must share that logic, not become two implementations.
 An alternative orchestrator would need a documented decision before switching.
 
-Target layout (settings/logging and their tests now exist; later stages remain planned):
+Target layout (settings/logging/downloading and their tests now exist; reporting remains planned):
 
 ```text
 src/green_taxi/           settings.py, download.py, revenue.py, report.py, pipeline.py, cli.py
@@ -194,4 +194,5 @@ public release. Retain source attribution and the existing license notice.
   manual-run/rebuild behaviour (04.11.2026 follow-up).
 
 Record later decision changes here. Implementation progress belongs in
-[TASKS.md](../../TASKS.md). The foundation does not yet run the data pipeline.
+[TASKS.md](../../TASKS.md). The downloader stages raw files only; report generation,
+Docker, and Prefect execution are not implemented yet.
