@@ -27,7 +27,17 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   Design configuration and paths for host and container use, with no hard-coded
   machine paths. Done when imports, a small test, and the first CI check pass;
   no download or server startup at import time.
+  The original foundation passed local checks and PR #2 CI. Includes immutable
+  settings, isolated logging, an installable package, and CI on every branch push
+  and PR. Owner review remains pending; this is not yet marked done.
+  Review follow-up: expanded docstrings, moved month selection to packaged JSON,
+  added explicit file loading and command tests. Runtime validation checks month
+  format/calendar validity and uniqueness rather than a fixed Python list.
+  All 34 local foundation cases and three reference cases pass. Follow-up changes
+  have not been committed/pushed, so hosted CI has not checked that revision yet.
 - [ ] **T03 — Download and stage the files.** Download the three requested months.
+  Before merging its dependent PR, adapt downloader settings calls and month
+  options to the reviewed JSON configuration rather than repeat fixed choices.
   Done when HTTP failures and interrupted downloads are tested, incomplete files
   cannot be reused as complete files, and valid existing files can be reused.
   Capture each input's source URL, filename, size, and SHA-256 for lineage; test

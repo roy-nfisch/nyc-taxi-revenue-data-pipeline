@@ -4,7 +4,7 @@ We are planning a small, object-oriented Python **batch ETL pipeline** that turn
 Taxi rides into a daily revenue report. The focus is reliable downloads, clear
 data rules, useful tests, and a process someone else can run.
 
-**Status: plan agreed on 04.11.2026; implementation has not started.** The accepted
+**Status: Python foundation added; the full pipeline is not implemented yet.** The accepted
 data rules, simple OOD plan, and fact/date layout are in
 [ADR 001](docs/adr/001-pipeline-design.md). Docker and Prefect are required.
 Follow our progress in [TASKS.md](TASKS.md).
@@ -63,7 +63,7 @@ for the agreed lineage fields and launch behaviour.
 |---|---|
 | Python, pandas, and PyArrow | Read Parquet and calculate daily totals using tools already in the project. |
 | Requests | Download source files with explicit timeouts and HTTP error handling. |
-| Pydantic | Validate run settings, such as months and paths; table checks stay in pandas. This would be a new dependency. |
+| Pydantic | Validate run settings, such as months and paths; table checks stay in pandas. |
 | pytest and GitHub Actions | Check calculations and a small end-to-end run without downloading the full dataset in CI. |
 | uv | Reuse the project's environment and lock file. |
 | Prefect — required | Coordinate downloading, calculation, and saving with visible task states and bounded retries for transient failures. |
@@ -79,12 +79,15 @@ execution from the start, not add a separate container-only implementation.
 README.md                         Project goal, scope, and setup
 TASKS.md                          Work and completion checks
 docs/adr/001-pipeline-design.md    Accepted rules, object responsibilities, and table layout
-pyproject.toml / uv.lock          Existing environment
+pyproject.toml / uv.lock          Installable package and locked environment
+src/green_taxi/                   Settings, explicit logging, and settings entry point
+src/green_taxi/defaults.json      Default source-month selection, loaded at runtime
+tests/green_taxi/                 Mirrored settings, logging, and import checks
+.github/workflows/ci.yml          Feature-branch and PR lint, tests, and build
 solution/                         Supplied reference; remove before public release
 ```
 
-Our future `src/green_taxi/` package and matching `tests/green_taxi/` structure
-are planned in the ADR. Those folders do not exist yet.
+Revenue calculation, report writing, Docker, and Prefect delivery remain planned.
 
 ## Setup
 
@@ -99,11 +102,42 @@ This installs all dependencies and creates a virtual environment in `.venv/`.
 ```bash
 git clone https://github.com/roy-nfisch/mle-data-pipeline-project.git
 cd mle-data-pipeline-project
-uv sync
+uv sync --locked
 ```
 
-This prepares the existing environment; it does not run our future
-pipeline. Run instructions will be added when the implementation is verified.
+Inspect validated settings without starting downloads or services:
+
+```bash
+uv run --locked python -m green_taxi
+uv run --locked pytest
+uv run --locked ruff check src tests
+uv run --locked ruff format --check src tests
+uv build
+```
+
+The command reads [defaults.json](src/green_taxi/defaults.json), validates it, and
+prints the resulting settings. The default months are defined only in that file,
+not repeated in a Python Literal and default tuple. Month validation checks real
+`YYYY-MM` values and uniqueness. The default project still covers Jan–Mar 2025.
+
+To load your own JSON file, use `--config path/to/run.json`. It must contain
+`months`; it can also set `data_dir`, `timeout_seconds`, and `log_level`. This is
+a local file, not a web upload. Invalid/missing files fail instead of falling back.
+Changing source-month selection does not automatically change the agreed report
+date boundaries; that would require a separate data-rule decision.
+
+Click translates terminal options into arguments to our Python function. It does
+not run GitHub Actions or orchestrate tasks. Python/Prefect callers can bypass it:
+
+```python
+from green_taxi.settings import PipelineSettings
+
+settings = PipelineSettings.from_file()  # Packaged JSON defaults
+```
+
+For a future container, `--data-dir /data` overrides JSON storage with a mount.
+Configuration does not create directories. Tests use temporary paths, not our
+real dataset. CI also checks the supplied reference tests separately.
 
 ## Acknowledgements
 
