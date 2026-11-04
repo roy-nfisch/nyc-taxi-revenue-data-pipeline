@@ -41,14 +41,14 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   data job. Latest GitHub checks remain a merge gate, not a claimed result here.
   No revenue outputs have been created.
 
-## In progress
-
-- [ ] **T04 — Build the daily calculation.** Apply only approved data rules and
+- [x] **T04 — Build the daily calculation.** Reviewed and merged in
+  [PR #4](https://github.com/roy-nfisch/mle-data-pipeline-project/pull/4).
+  Apply only approved data rules and
   aggregate `fact_daily_revenue` by pickup day. Generate `dim_date` with a small
   pure helper, not a separate service. Done when small known examples cover
   boundaries, invalid rows, multiple files, exact daily counts/amounts, and the
   90-day calendar without invented zero-revenue fact rows.
-  Implemented for review; report writing and the complete command remain separate.
+  Completed; report writing and the complete command remain separate.
   Local checks pass 154 application tests, including 53 integration tests rerun
   with two workers, plus three reference tests, lint/format, and package build.
   This verifies tiny synthetic inputs, not the later full-data report review.
@@ -70,7 +70,7 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   - Keep one fact per accepted pickup day; generate every date in the period
     separately. A missing fact does not become an invented zero-revenue day.
 
-## To do
+## In progress
 
 - [ ] **T05 — Save the report and connect the command.** Compose the objects into
   one local entry point. Done when a temporary-file integration test checks the
@@ -80,6 +80,17 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   run ID, UTC start/finish times, reporting period, input details, output filenames,
   and row counts. Record code revision/dirty status when available, otherwise
   explicitly unknown. Test that metadata describes the actual inputs and outputs.
+  Implemented for review; not yet committed or approved. Local checks pass 190
+  application tests with two workers, three reference tests, lint/format, and
+  package build. Tests cover read-back values, reruns, lineage, and staging/write
+  failures. Full real-data reconciliation stays in T06.
+  Audit fixes: verify staged Parquet/CSV values before publication, reject
+  non-decimal money and invalid run counters, and cover every replacement failure
+  point, prior-report preservation, and known/unknown Git identity. No new services
+  or dependencies; existing objects keep their responsibilities.
+
+## To do
+
 - [ ] **T06 — Run the real data and review the result.** Process all three files;
   account for included/excluded rows and reconcile report totals with accepted rides.
   Check the saved date dimension and matching daily facts too. Done when outputs
