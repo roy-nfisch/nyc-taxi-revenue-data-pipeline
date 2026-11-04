@@ -4,7 +4,8 @@ We are planning a small, object-oriented Python **batch ETL pipeline** that turn
 Taxi rides into a daily revenue report. The focus is reliable downloads, clear
 data rules, useful tests, and a process someone else can run.
 
-**Status: foundation and raw-file downloader added; reporting is not implemented yet.** The accepted
+**Status: settings, raw-file downloading, and daily calculation are available.**
+Saving reports and connecting the complete pipeline are still planned. The accepted
 data rules, simple OOD plan, and fact/date layout are in
 [ADR 001](docs/adr/001-pipeline-design.md). Docker and Prefect are required.
 Follow our progress in [TASKS.md](TASKS.md).
@@ -87,7 +88,7 @@ pyproject.toml       Package, dependencies, and tool configuration
 uv.lock              Locked dependency versions
 ```
 
-Revenue calculation, report writing, Docker, and Prefect delivery remain planned.
+Report writing, Docker, and Prefect delivery remain planned.
 
 ## Setup
 
@@ -121,10 +122,42 @@ not repeated in a Python Literal and default tuple. Month validation checks real
 `YYYY-MM` values and uniqueness. The default project still covers Jan–Mar 2025.
 
 To load your own JSON file, use `--config path/to/run.json`. It must contain
-`months`; it can also set `source_url`, `data_dir`, `timeout_seconds`, and `log_level`. This is
-a local file, not a web upload. Invalid/missing files fail instead of falling back.
+`months`; it can also set `reporting_period`, `source_url`, `data_dir`,
+`timeout_seconds`, and `log_level`. This is a local file, not a web upload.
+Invalid/missing files fail instead of falling back.
 Changing source-month selection does not automatically change the agreed report
 date boundaries; that would require a separate data-rule decision.
+
+### Reporting months
+
+We configure the first month and how many **whole calendar months** to include.
+`ReportingPeriod` validates these values and derives the start/end dates; we do
+not maintain a second editable end date.
+
+```json
+{
+  "months": ["2025-01", "2025-02", "2025-03"],
+  "reporting_period": {
+    "start_month": "2025-01",
+    "duration_months": 3
+  }
+}
+```
+
+The example includes January, February, and March: 01.01.2025 up to, but not
+including, 01.04.2025.
+
+| `duration_months` | Meaning |
+|---|---|
+| `1` | The whole starting month, not the current month or thirty days |
+| `3` | The starting month and the following two months |
+| `0` or a negative number | Invalid; no special “until today” meaning |
+| `"3"`, `3.0`, `true`, or `null` | Invalid; only positive integers pass |
+
+Invalid month formats, missing fields, extra boundary fields, and dates beyond
+the supported calendar also fail before processing starts. The range does not
+depend on today's date. Download months and reporting months remain separate:
+the pickup date, not the filename, determines whether a ride belongs in the report.
 
 Click translates terminal options into arguments to our Python function. It does
 not run GitHub Actions or orchestrate tasks. Python/Prefect callers can bypass it:
@@ -147,9 +180,9 @@ They do not use the real downloaded data or live internet.
 
 | Marker | What it covers |
 |---|---|
-| `unit` | Settings validation and application logging in isolation |
-| `integration` | File loading, CLI behaviour, subprocess imports, and staged downloads |
-| `data` | Additional label on Parquet structure, input identity, and publication checks; not a separate duplicate CI run |
+| `unit` | Settings validation, logging, money/date rules, and calendar generation in isolation |
+| `integration` | File loading, CLI behaviour, imports, downloads, and calculation across real tiny Parquet files |
+| `data` | Additional label for file structure, calculation rules, and output-table checks; not a duplicate CI run |
 
 Every project test must have exactly one unit/integration marker. Test folders
 still mirror the source. Intentional invalid/boundary dates remain explicit test

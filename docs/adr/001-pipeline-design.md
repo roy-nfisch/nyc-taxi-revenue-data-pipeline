@@ -22,7 +22,7 @@ Following King County's composition approach, each object owns one job:
 
 | Component | Owns | Must not own |
 |---|---|---|
-| `PipelineSettings` — Pydantic | Validate requested months and configured paths | Download or transform data |
+| `PipelineSettings` and `ReportingPeriod` — Pydantic | Validate source months, paths, and the report's calendar range | Download or transform data |
 | `TaxiDownloader` | Download and validate complete staged files | Calculate revenue |
 | `DailyRevenueCalculator` | Check required columns, apply agreed row rules, aggregate daily facts | HTTP requests or saving reports |
 | `ReportWriter` | Save the checked fact/date tables and run counts | Change the calculation |
@@ -39,6 +39,21 @@ user-supplied JSON object and validates its contents. Direct construction must
 supply months explicitly. Calendar-format validation is reusable; the default
 selection and the agreed reporting period remain January–March 2025. A different
 source selection alone does not approve different reporting-period rules.
+The reporting range uses `start_month` plus a strictly positive integer
+`duration_months`. `ReportingPeriod` derives inclusive start and exclusive end
+with calendar-month arithmetic, not thirty-day increments. One means the whole
+starting month; zero/negative numbers are errors, not modes. Strings, floats,
+booleans, null, invalid calendar months, extra fields, and year overflow fail
+validation. No current-date dependency or “until today” shortcut is implemented.
+This replaces two separately editable boundaries and keeps the approved default
+at January–March 2025. Source-file selection remains a separate setting.
+
+`ReportingPeriod` belongs beside `PipelineSettings`: it is a small settings value
+object, not a new service. The calculator receives only that period. Its
+`RevenueResult` output bundle stays beside the calculator; we do not require one
+class per file. The result container is frozen, but returned tables and counts
+are caller-owned mutable values; the calculator retains no run state.
+
 The thin Click command prints settings; it does not replace Prefect orchestration.
 The public source directory also lives in `defaults.json`; validated settings
 carry it into the downloader. User configuration must be trusted: HTTPS URL syntax
@@ -53,7 +68,7 @@ coordinates execution, while the Python objects own the data rules. Local Python
 and container execution must share that logic, not become two implementations.
 An alternative orchestrator would need a documented decision before switching.
 
-Target layout (settings/logging/downloading and their tests now exist; reporting remains planned):
+Target layout (settings/logging/downloading/calculation exist; saving and orchestration remain planned):
 
 ```text
 src/green_taxi/           settings.py, download.py, revenue.py, report.py, pipeline.py, cli.py
@@ -204,4 +219,5 @@ public release. Retain source attribution and the existing license notice.
 
 Record later decision changes here. Implementation progress belongs in
 [TASKS.md](../../TASKS.md). The downloader stages raw files only; report generation,
-Docker, and Prefect execution are not implemented yet.
+Docker, and Prefect execution are not implemented yet. Daily calculation now
+returns fact/date tables and row counts in memory; saving belongs to the next task.
