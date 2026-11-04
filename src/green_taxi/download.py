@@ -15,8 +15,9 @@ import requests
 from green_taxi.logging import configure_logging
 from green_taxi.settings import PipelineSettings
 
-SOURCE_URL = "https://d37ci6vzurychx.cloudfront.net/trip-data"
 REQUIRED_COLUMNS = {"lpep_pickup_datetime", "total_amount"}
+DOWNLOAD_CHUNK_BYTES = 1024 * 1024
+PARQUET_BATCH_ROWS = 65536
 logger = logging.getLogger("green_taxi.download")
 
 
@@ -77,15 +78,60 @@ class TaxiDownloader:
         """
         filename = f"green_tripdata_{month}.parquet"
         destination = self.settings.raw_dir / filename
-        url = f"{SOURCE_URL}/{filename}"
+        url = f"{str(self.settings.source_url).rstrip('/')}/{filename}"
         downloaded = force or not destination.exists()
+        action = "download" if downloaded else "reuse"
+        logger.info("Starting %s for %s", action, filename)
+        try:
+            result = self._stage_input(month, destination, url, session, downloaded)
+        except requests.RequestException as error:
+            response = getattr(error, "response", None)
+            status = response.status_code if response is not None else "unavailable"
+            logger.error(
+                "Staging failed for %s: network=%s status=%s timeout=%ss; "
+                "no replacement published; retry the command "
+                "when connectivity recovers",
+                filename,
+                type(error).__name__,
+                status,
+                self.settings.timeout_seconds,
+            )
+            raise
+        except (OSError, ValueError) as error:
+            logger.error(
+                "Staging failed for %s: %s; check local file/storage",
+                filename,
+                type(error).__name__,
+            )
+            raise
+        logger.info(
+            "%s %s (%s bytes)",
+            "Downloaded" if downloaded else "Reused",
+            filename,
+            result.size_bytes,
+        )
+        return result
+
+    def _stage_input(
+        self,
+        month: str,
+        destination: Path,
+        url: str,
+        session: requests.Session,
+        downloaded: bool,
+    ) -> StagedFile:
+        """Publish or validate one input and return its content identity.
+
+        Called by _stage so logging stays separate from the file operations.
+        Failures propagate to _stage; a result is returned only after validation
+        and checksum calculation. Does not suppress network or storage errors.
+        """
         if downloaded:
             self._fetch(url, destination, session)
         else:
             self._validate(destination)
         with destination.open("rb") as stream:
             checksum = hashlib.file_digest(stream, "sha256").hexdigest()
-        logger.info("%s %s", "Downloaded" if downloaded else "Reused", filename)
         return StagedFile(
             month, destination, url, destination.stat().st_size, checksum, downloaded
         )
@@ -93,7 +139,7 @@ class TaxiDownloader:
     def _fetch(self, url: str, destination: Path, session: requests.Session) -> None:
         """Publish a fully validated temporary file; preserve old data on failure.
 
-        Inputs are the fixed-provider URL, destination, and HTTP session. Streams
+        Inputs are the configured source URL, destination, and HTTP session. Streams
         bytes into the destination directory, validates them, then replaces the
         destination. Returns None. HTTP/filesystem/validation errors propagate.
         Removes this call's temporary file on normal exception paths; a killed
@@ -109,7 +155,7 @@ class TaxiDownloader:
             ) as response:
                 response.raise_for_status()
                 with temporary.open("wb") as output:
-                    for chunk in response.iter_content(chunk_size=1024 * 1024):
+                    for chunk in response.iter_content(chunk_size=DOWNLOAD_CHUNK_BYTES):
                         if chunk:
                             output.write(chunk)
             self._validate(temporary)
@@ -132,7 +178,7 @@ class TaxiDownloader:
                     )
                 if parquet.metadata.num_rows == 0:
                     raise ValueError("Input contains no ride records.")
-                for _ in parquet.iter_batches(batch_size=65536):
+                for _ in parquet.iter_batches(batch_size=PARQUET_BATCH_ROWS):
                     pass
         except pa.ArrowException as error:
             raise ValueError(f"Unreadable Parquet input: {path.name}") from error

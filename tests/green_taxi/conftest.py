@@ -1,5 +1,6 @@
 """Small real Parquet payloads and an HTTP double; no live network in tests."""
 
+import logging
 from datetime import datetime
 from unittest.mock import MagicMock
 
@@ -12,12 +13,40 @@ from green_taxi.settings import PipelineSettings
 
 
 @pytest.fixture
-def parquet_bytes():
+def download_logs(caplog):
+    """Capture downloader logs independently of previous CLI logger configuration."""
+    logger = logging.getLogger("green_taxi.download")
+    previous = logger.level, logger.propagate
+    logger.addHandler(caplog.handler)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    try:
+        yield caplog
+    finally:
+        logger.removeHandler(caplog.handler)
+        logger.setLevel(previous[0])
+        logger.propagate = previous[1]
+
+
+@pytest.fixture
+def sample_months():
+    """Central synthetic months, independent of the production download selection."""
+    return ("2031-01", "2031-02", "2031-03")
+
+
+@pytest.fixture
+def sample_filename(sample_months):
+    """Name of the first synthetic source file used in staging tests."""
+    return f"green_tripdata_{sample_months[0]}.parquet"
+
+
+@pytest.fixture
+def parquet_bytes(sample_months):
     """Return a builder for tiny Parquet files with optional missing columns."""
 
     def build(amount=10.5, missing=None, empty=False):
         values = {
-            "lpep_pickup_datetime": [datetime(2025, 1, 1)],
+            "lpep_pickup_datetime": [datetime.fromisoformat(f"{sample_months[0]}-01")],
             "total_amount": [amount],
         }
         if missing:
@@ -33,10 +62,10 @@ def parquet_bytes():
 
 
 @pytest.fixture
-def staging(tmp_path, parquet_bytes):
+def staging(tmp_path, parquet_bytes, sample_months):
     """Return downloader, fake session, and response with real readable bytes."""
     session = MagicMock()
     response = session.get.return_value.__enter__.return_value
     response.iter_content.side_effect = lambda **kwargs: iter([b"", parquet_bytes()])
-    settings = PipelineSettings(data_dir=tmp_path, months=("2025-01",))
+    settings = PipelineSettings(data_dir=tmp_path, months=(sample_months[0],))
     return TaxiDownloader(settings, session), session, response

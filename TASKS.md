@@ -28,23 +28,18 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   Local checks passed 34 foundation tests, three reference tests, lint/format,
   and package build. Configuration does not start downloads or Prefect.
 
-## In progress — ready for owner review
-
-- [ ] **T03 — Download and stage the files.** Download the three requested months.
-  Rebased onto merged T02. Downloader settings and command options now use the
-  shared JSON loader, with no second fixed month list.
-  Done when HTTP failures and interrupted downloads are tested, incomplete files
-  cannot be reused as complete files, and valid existing files can be reused.
-  Capture each input's source URL, filename, size, and SHA-256 for lineage; test
-  that changed contents are distinguishable even under the same filename.
-  Implemented `TaxiDownloader` with temporary-file publication, full Parquet
-  readability checks, injected HTTP sessions, and immutable staged-file records.
-  Real January–March downloads and a validated reuse run succeeded; hashes match
-  the earlier inspection. Raw files stay ignored. Local regression checks pass;
-  hosted CI is reported on the PR; owner review remains pending. No revenue outputs created.
-  After JSON alignment, 51 application tests and three reference tests pass,
-  with lint/format and package build checked locally. Review is in
-  [PR #3](https://github.com/roy-nfisch/mle-data-pipeline-project/pull/3).
+- [x] **T03 — Download and stage the files.** Implementation reviewed and accepted
+  on 04.11.2026; delivery is tracked in [PR #3](https://github.com/roy-nfisch/mle-data-pipeline-project/pull/3),
+  not yet merged. `TaxiDownloader` uses shared JSON months/source URL, validates
+  complete Parquet before reuse/publication, preserves old files on failed
+  refreshes, and returns input identities for lineage. Safe failure logs and shared
+  synthetic fixtures cover HTTP, interruption, corruption, and storage failures.
+  Real January–March download/reuse checks passed; raw files remain ignored.
+  Local verification passes 58 application tests (27 unit, 31 integration; 19
+  additionally labelled data), three reference tests, lint/format, and build.
+  CI separates categories and uses two integration workers without a duplicate
+  data job. Latest GitHub checks remain a merge gate, not a claimed result here.
+  No revenue outputs have been created.
 
 ## To do
 

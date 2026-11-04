@@ -76,18 +76,15 @@ execution from the start, not add a separate container-only implementation.
 ## Repository map
 
 ```text
-README.md                         Project goal, scope, and setup
-TASKS.md                          Work and completion checks
-docs/adr/001-pipeline-design.md    Accepted rules, object responsibilities, and table layout
-pyproject.toml / uv.lock          Installable package and locked environment
-src/green_taxi/settings.py        Validated months, paths, timeouts, and logging level
-src/green_taxi/defaults.json      Default source-month selection, loaded at runtime
-src/green_taxi/logging.py         Explicit application logging setup
-src/green_taxi/__main__.py        Settings inspection command
-src/green_taxi/download.py        Downloader object, staged-file identity, download command
-tests/green_taxi/                 Mirrored tests and small offline Parquet/HTTP fixtures
-.github/workflows/ci.yml          Feature-branch and PR lint, tests, and build
-solution/                         Supplied reference; remove before public release
+src/green_taxi/       Pipeline objects, configuration, and commands
+tests/               Mirrored tests and shared fixtures
+docs/                Design decisions and data rules
+.github/workflows/   Automated checks
+solution/            Supplied reference; remove before public release
+README.md            Project overview and run instructions
+TASKS.md             Progress and completion checks
+pyproject.toml       Package, dependencies, and tool configuration
+uv.lock              Locked dependency versions
 ```
 
 Revenue calculation, report writing, Docker, and Prefect delivery remain planned.
@@ -124,7 +121,7 @@ not repeated in a Python Literal and default tuple. Month validation checks real
 `YYYY-MM` values and uniqueness. The default project still covers Jan–Mar 2025.
 
 To load your own JSON file, use `--config path/to/run.json`. It must contain
-`months`; it can also set `data_dir`, `timeout_seconds`, and `log_level`. This is
+`months`; it can also set `source_url`, `data_dir`, `timeout_seconds`, and `log_level`. This is
 a local file, not a web upload. Invalid/missing files fail instead of falling back.
 Changing source-month selection does not automatically change the agreed report
 date boundaries; that would require a separate data-rule decision.
@@ -141,6 +138,36 @@ settings = PipelineSettings.from_file()  # Packaged JSON defaults
 For a future container, `--data-dir /data` overrides JSON storage with a mount.
 Configuration does not create directories. Tests use temporary paths, not our
 real dataset. CI also checks the supplied reference tests separately.
+
+### Test categories and parallel checks
+
+**Fixtures prepare things; markers classify tests.** Shared fixtures provide
+synthetic months, filenames, Parquet bytes, HTTP responses, and isolated log capture.
+They do not use the real downloaded data or live internet.
+
+| Marker | What it covers |
+|---|---|
+| `unit` | Settings validation and application logging in isolation |
+| `integration` | File loading, CLI behaviour, subprocess imports, and staged downloads |
+| `data` | Additional label on Parquet structure, input identity, and publication checks; not a separate duplicate CI run |
+
+Every project test must have exactly one unit/integration marker. Test folders
+still mirror the source. Intentional invalid/boundary dates remain explicit test
+cases; repeated valid downloader setup lives in fixtures instead of each test.
+
+```bash
+uv run --locked pytest -m unit
+uv run --locked pytest -m integration -n 2 --dist loadfile
+uv run --locked pytest -m data
+uv run --locked pytest -n 2 --dist loadfile
+```
+
+CI runs unit and integration jobs concurrently after lint/build/reference checks.
+Integration uses two workers grouped by file; unit tests are serial within their
+job to avoid worker-startup overhead. Reference tests run once in the checks job.
+A three-run local comparison measured integration wall time around 0.96 seconds
+serial and 0.93 seconds with two workers: effectively similar at this small size,
+not evidence of a substantial speedup. These are local measurements, not CI promises.
 
 ### Download the raw files
 
@@ -160,6 +187,10 @@ uv run --locked python -m green_taxi.download --config run.json --data-dir ./dat
 
 The same settings loader validates both commands; there is no separate hardcoded
 month list in the downloader. `--data-dir` overrides JSON storage when supplied.
+The public dataset directory comes from `source_url` in `defaults.json`, not a
+Python URL constant. A custom JSON file can override it with a trusted HTTPS
+directory without credentials/query/fragment. No .env file is required; never put
+secrets in committed JSON. Syntax validation does not make an arbitrary endpoint safe.
 Use `--force` to deliberately refresh selected files. Downloads use temporary
 files, read every Parquet batch, require the pickup/amount columns and at least
 one row, then replace the staged file. Failed refreshes keep the previous file.
@@ -171,6 +202,10 @@ sizes, checksums, and whether each file was downloaded or reused. The command
 prints sizes/checksums; saving run metadata belongs to the report-writing stage.
 Checksums identify content, not trusted fares. Row-level rules are not applied yet.
 Use one writer per data directory; concurrent publication is not supported.
+Logs identify the selected file, download/reuse start, successful size, and failures.
+Network failures include exception type, available HTTP status, timeout, and retry
+advice. Raw exception text and source URLs are not logged. Errors still propagate;
+logging does not retry automatically or hide a failed run.
 
 ## Acknowledgements
 

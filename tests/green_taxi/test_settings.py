@@ -5,6 +5,8 @@ from pydantic import ValidationError
 
 from green_taxi.settings import PipelineSettings
 
+pytestmark = pytest.mark.unit
+
 
 @pytest.mark.parametrize("months", [("2025-01",), ("2025-03", "2025-01"), ("2026-12",)])
 def test_month_selection(months):
@@ -29,6 +31,11 @@ def test_month_selection(months):
         {"timeout_seconds": float("nan")},
         {"log_level": "QUIET"},
         {"unexpected": True},
+        {"source_url": "http://example.org/data"},
+        {"source_url": "https://user:password@example.org/data"},
+        {"source_url": "https://example.org/data?token=secret"},
+        {"source_url": "https://example.org/data#fragment"},
+        {"source_url": "not a URL"},
     ],
 )
 def test_invalid_settings(values):

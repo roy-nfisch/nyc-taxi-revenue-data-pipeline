@@ -3,6 +3,10 @@
 import subprocess
 import sys
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 
 def test_imports_do_not_access_network_or_create_storage(tmp_path):
     """Block network and directory writes while importing in a clean directory."""
