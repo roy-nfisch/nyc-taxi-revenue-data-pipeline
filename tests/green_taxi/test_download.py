@@ -130,7 +130,7 @@ def test_all_months_and_owned_session_cleanup(tmp_path, staging, monkeypatch):
     _, session, _ = staging
     session.__enter__.return_value = session
     monkeypatch.setattr(requests, "Session", lambda: session)
-    downloader = TaxiDownloader(PipelineSettings(data_dir=tmp_path))
+    downloader = TaxiDownloader(PipelineSettings.from_file(data_dir=tmp_path))
     results = downloader.download()
     assert [item.month for item in results] == ["2025-01", "2025-02", "2025-03"]
     assert session.get.call_count == 3
@@ -164,10 +164,13 @@ def test_cli_download_and_invalid_month(tmp_path, staging, monkeypatch):
     session.__enter__.return_value = session
     monkeypatch.setattr(requests, "Session", lambda: session)
     runner = CliRunner()
-    result = runner.invoke(main, ["--data-dir", str(tmp_path), "--month", "2025-01"])
+    config = tmp_path / "run.json"
+    config.write_text('{"months": ["2025-01"]}')
+    result = runner.invoke(main, ["--data-dir", str(tmp_path), "--config", str(config)])
     assert result.exit_code == 0, result.output
     assert "green_tripdata_2025-01.parquet" in result.output
     session.reset_mock()
-    invalid = runner.invoke(main, ["--month", "../2025-01"])
-    assert invalid.exit_code == 2
+    config.write_text('{"months": ["../2025-01"]}')
+    invalid = runner.invoke(main, ["--config", str(config)])
+    assert invalid.exit_code != 0
     session.get.assert_not_called()

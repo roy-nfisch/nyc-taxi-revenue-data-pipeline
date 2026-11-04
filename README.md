@@ -151,12 +151,15 @@ uv run --locked python -m green_taxi.download
 ```
 
 This downloads January–March 2025 to ignored `data/raw/`. Run it again to reuse
-validated files. To choose one month or use another storage mount:
+validated files. To choose other months, put the selection in a local JSON file,
+for example `{"months": ["2025-01"]}` in `run.json`, then run:
 
 ```bash
-uv run --locked python -m green_taxi.download --month 2025-01 --data-dir ./data
+uv run --locked python -m green_taxi.download --config run.json --data-dir ./data
 ```
 
+The same settings loader validates both commands; there is no separate hardcoded
+month list in the downloader. `--data-dir` overrides JSON storage when supplied.
 Use `--force` to deliberately refresh selected files. Downloads use temporary
 files, read every Parquet batch, require the pickup/amount columns and at least
 one row, then replace the staged file. Failed refreshes keep the previous file.

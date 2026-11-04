@@ -31,8 +31,8 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
 ## In progress — ready for owner review
 
 - [ ] **T03 — Download and stage the files.** Download the three requested months.
-  Before merging its dependent PR, adapt downloader settings calls and month
-  options to the reviewed JSON configuration rather than repeat fixed choices.
+  Rebased onto merged T02. Downloader settings and command options now use the
+  shared JSON loader, with no second fixed month list.
   Done when HTTP failures and interrupted downloads are tested, incomplete files
   cannot be reused as complete files, and valid existing files can be reused.
   Capture each input's source URL, filename, size, and SHA-256 for lineage; test
@@ -42,6 +42,9 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   Real January–March downloads and a validated reuse run succeeded; hashes match
   the earlier inspection. Raw files stay ignored. Local regression checks pass;
   hosted CI is reported on the PR; owner review remains pending. No revenue outputs created.
+  After JSON alignment, 51 application tests and three reference tests pass,
+  with lint/format and package build checked locally. Review is in
+  [PR #3](https://github.com/roy-nfisch/mle-data-pipeline-project/pull/3).
 
 ## To do
 

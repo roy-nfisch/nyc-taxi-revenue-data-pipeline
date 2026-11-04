@@ -51,6 +51,10 @@ class TaxiDownloader:
 
         Completed months survive a later month's failure. Retry revalidates them.
         The caller owns an injected session; internally created sessions close here.
+        force refreshes selected files. Returns one StagedFile per selected month
+        in configuration order. HTTP, filesystem, and validation errors propagate;
+        no success result is returned for a failed batch. Creates raw_dir only
+        when called, not during object construction.
         """
         self.settings.raw_dir.mkdir(parents=True, exist_ok=True)
         context = (
@@ -64,7 +68,13 @@ class TaxiDownloader:
             )
 
     def _stage(self, month: str, session: requests.Session, force: bool) -> StagedFile:
-        """Validate or replace one input, then return its actual content identity."""
+        """Validate or replace one input, then return its actual content identity.
+
+        month comes from validated settings, session performs HTTP requests, and
+        force selects refresh rather than reuse. Reads staged bytes to calculate
+        SHA-256 and size. Existing corrupt files raise ValueError instead of
+        silently triggering a download; force allows deliberate repair.
+        """
         filename = f"green_tripdata_{month}.parquet"
         destination = self.settings.raw_dir / filename
         url = f"{SOURCE_URL}/{filename}"
@@ -81,7 +91,14 @@ class TaxiDownloader:
         )
 
     def _fetch(self, url: str, destination: Path, session: requests.Session) -> None:
-        """Publish a fully validated temporary file; preserve old data on failure."""
+        """Publish a fully validated temporary file; preserve old data on failure.
+
+        Inputs are the fixed-provider URL, destination, and HTTP session. Streams
+        bytes into the destination directory, validates them, then replaces the
+        destination. Returns None. HTTP/filesystem/validation errors propagate.
+        Removes this call's temporary file on normal exception paths; a killed
+        process may leave a .part file, which is never selected as a staged input.
+        """
         with NamedTemporaryFile(
             dir=destination.parent, suffix=".part", delete=False
         ) as stream:
@@ -122,23 +139,30 @@ class TaxiDownloader:
 
 
 @click.command()
-@click.option("--data-dir", default="data", type=click.Path(path_type=Path))
 @click.option(
-    "--month",
-    "months",
-    multiple=True,
-    type=click.Choice(["2025-01", "2025-02", "2025-03"]),
+    "--config",
+    "config_path",
+    type=click.Path(path_type=Path, exists=True, dir_okay=False),
 )
+@click.option("--data-dir", default=None, type=click.Path(path_type=Path))
 @click.option(
     "--force",
     is_flag=True,
     help="Refresh selected files; preserve existing files if refresh fails.",
 )
-def main(data_dir: Path, months: tuple[str, ...], force: bool) -> None:
-    """Download raw inputs only; default to all three months. No reports yet."""
-    settings = PipelineSettings(
-        data_dir=data_dir, **({"months": months} if months else {})
-    )
+def main(config_path: Path | None, data_dir: Path | None, force: bool) -> None:
+    """Download raw inputs selected by JSON; no revenue reports are produced.
+
+    config_path chooses a JSON file, or defaults.json when omitted. data_dir
+    optionally overrides storage for a local path or container mount. force
+    refreshes selected months. Prints filenames, sizes, and checksums; returns
+    None. Configuration failures become Click errors before any HTTP request;
+    runtime download failures propagate with an unsuccessful process exit.
+    """
+    try:
+        settings = PipelineSettings.from_file(config_path, data_dir=data_dir)
+    except (OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
     configure_logging(settings)
     for item in TaxiDownloader(settings).download(force=force):
         click.echo(f"{item.path.name}: {item.size_bytes} bytes, sha256={item.sha256}")

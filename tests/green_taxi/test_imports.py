@@ -9,9 +9,11 @@ def test_imports_do_not_access_network_or_create_storage(tmp_path):
     code = """
 from unittest.mock import patch
 import requests
-with patch("requests.sessions.Session.request", side_effect=AssertionError("HTTP on import")), \
-     patch("socket.create_connection", side_effect=AssertionError("network on import")), \
-     patch("pathlib.Path.mkdir", side_effect=AssertionError("mkdir on import")):
+with (
+    patch("requests.sessions.Session.request", side_effect=AssertionError("HTTP")),
+    patch("socket.create_connection", side_effect=AssertionError("network")),
+    patch("pathlib.Path.mkdir", side_effect=AssertionError("mkdir")),
+):
     import green_taxi.settings
     import green_taxi.logging
     import green_taxi.__main__
