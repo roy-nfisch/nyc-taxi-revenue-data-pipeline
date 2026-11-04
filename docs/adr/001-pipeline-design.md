@@ -33,6 +33,14 @@ separate download, calculation, and save tasks. Avoid a generic
 repository/factory hierarchy; small helper functions are fine inside these responsibilities.
 Pydantic checks settings, not millions of individual ride objects; pandas checks the tables.
 
+Month selection lives in packaged `defaults.json`, not a Python Literal or
+duplicated default list. `PipelineSettings.from_file()` loads that file or a
+user-supplied JSON object and validates its contents. Direct construction must
+supply months explicitly. Calendar-format validation is reusable; the default
+selection and the agreed reporting period remain January–March 2025. A different
+source selection alone does not approve different reporting-period rules.
+The thin Click command prints settings; it does not replace Prefect orchestration.
+
 Design for Docker from the start: configure paths, mount raw/output storage,
 and keep container setup outside the calculation objects. Compose will run the
 pipeline and local Prefect services; check host ports before starting. Prefect

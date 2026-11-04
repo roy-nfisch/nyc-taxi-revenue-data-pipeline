@@ -12,9 +12,11 @@ def test_logging_reuses_handler_without_changing_root():
     logger = logging.getLogger("green_taxi")
     previous = logger.handlers[:], logger.level, logger.propagate
     try:
-        first = configure_logging(PipelineSettings())
+        first = configure_logging(PipelineSettings.from_file())
         handlers = first.handlers[:]
-        second = configure_logging(PipelineSettings(log_level="DEBUG"))
+        second = configure_logging(
+            PipelineSettings(months=("2025-01",), log_level="DEBUG")
+        )
         assert second.handlers == handlers
         assert second.level == logging.DEBUG
         assert logging.getLogger().handlers == root_handlers

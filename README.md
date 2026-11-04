@@ -81,6 +81,7 @@ TASKS.md                          Work and completion checks
 docs/adr/001-pipeline-design.md    Accepted rules, object responsibilities, and table layout
 pyproject.toml / uv.lock          Installable package and locked environment
 src/green_taxi/                   Settings, explicit logging, and settings entry point
+src/green_taxi/defaults.json      Default source-month selection, loaded at runtime
 tests/green_taxi/                 Mirrored settings, logging, and import checks
 .github/workflows/ci.yml          Feature-branch and PR lint, tests, and build
 solution/                         Supplied reference; remove before public release
@@ -107,14 +108,34 @@ uv sync --locked
 Inspect validated settings without starting downloads or services:
 
 ```bash
-uv run --locked python -m green_taxi --data-dir ./data
+uv run --locked python -m green_taxi
 uv run --locked pytest
 uv run --locked ruff check src tests
 uv run --locked ruff format --check src tests
 uv build
 ```
 
-For a future container, `--data-dir /data` can point to mounted storage.
+The command reads [defaults.json](src/green_taxi/defaults.json), validates it, and
+prints the resulting settings. The default months are defined only in that file,
+not repeated in a Python Literal and default tuple. Month validation checks real
+`YYYY-MM` values and uniqueness. The default project still covers Jan–Mar 2025.
+
+To load your own JSON file, use `--config path/to/run.json`. It must contain
+`months`; it can also set `data_dir`, `timeout_seconds`, and `log_level`. This is
+a local file, not a web upload. Invalid/missing files fail instead of falling back.
+Changing source-month selection does not automatically change the agreed report
+date boundaries; that would require a separate data-rule decision.
+
+Click translates terminal options into arguments to our Python function. It does
+not run GitHub Actions or orchestrate tasks. Python/Prefect callers can bypass it:
+
+```python
+from green_taxi.settings import PipelineSettings
+
+settings = PipelineSettings.from_file()  # Packaged JSON defaults
+```
+
+For a future container, `--data-dir /data` overrides JSON storage with a mount.
 Configuration does not create directories. Tests use temporary paths, not our
 real dataset. CI also checks the supplied reference tests separately.
 
