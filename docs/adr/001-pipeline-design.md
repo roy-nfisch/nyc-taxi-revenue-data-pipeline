@@ -40,6 +40,11 @@ supply months explicitly. Calendar-format validation is reusable; the default
 selection and the agreed reporting period remain January–March 2025. A different
 source selection alone does not approve different reporting-period rules.
 The thin Click command prints settings; it does not replace Prefect orchestration.
+The public source directory also lives in `defaults.json`; validated settings
+carry it into the downloader. User configuration must be trusted: HTTPS URL syntax
+checks do not provide an SSRF/network access-control boundary. Source credentials,
+queries, and fragments are rejected; .env/secret handling is not needed for this
+public source. Technical buffer sizes stay named constants, not deployment settings.
 
 Design for Docker from the start: configure paths, mount raw/output storage,
 and keep container setup outside the calculation objects. Compose will run the
@@ -48,7 +53,7 @@ coordinates execution, while the Python objects own the data rules. Local Python
 and container execution must share that logic, not become two implementations.
 An alternative orchestrator would need a documented decision before switching.
 
-Target layout (settings/logging and their tests now exist; later stages remain planned):
+Target layout (settings/logging/downloading and their tests now exist; reporting remains planned):
 
 ```text
 src/green_taxi/           settings.py, download.py, revenue.py, report.py, pipeline.py, cli.py
@@ -141,6 +146,10 @@ guarantee that the source covers every journey. Synthetic failure tests remain n
   validation alone does not prove that the business calculation is correct.
 - Check date uniqueness, calendar coverage, fact-to-date references, and an
   unchanged row count and revenue total after joining the two tables.
+- Mark tests as unit or integration, with an optional data label. Reuse synthetic
+  input fixtures and run isolated integration files with two workers; keep unit
+  tests serial within their separate CI job. Test parallelism is not parallel writing
+  into the same production data directory. Keep the supplied reference unchanged.
 
 ## Run history and rebuilds
 
@@ -194,4 +203,5 @@ public release. Retain source attribution and the existing license notice.
   manual-run/rebuild behaviour (04.11.2026 follow-up).
 
 Record later decision changes here. Implementation progress belongs in
-[TASKS.md](../../TASKS.md). The foundation does not yet run the data pipeline.
+[TASKS.md](../../TASKS.md). The downloader stages raw files only; report generation,
+Docker, and Prefect execution are not implemented yet.

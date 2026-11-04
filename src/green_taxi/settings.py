@@ -9,10 +9,19 @@ from datetime import date
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
 Month = Annotated[str, Field(pattern=r"^[0-9]{4}-(0[1-9]|1[0-2])$")]
 DEFAULT_CONFIG = Path(__file__).with_name("defaults.json")
+
+
+def default_source_url() -> str:
+    """Read the public source endpoint from packaged JSON, not a Python constant.
+
+    Used only when constructing settings without an explicit source_url. Missing
+    or malformed packaged configuration fails visibly; imports do not read it.
+    """
+    return json.loads(DEFAULT_CONFIG.read_text(encoding="utf-8"))["source_url"]
 
 
 class PipelineSettings(BaseModel):
@@ -26,6 +35,9 @@ class PipelineSettings(BaseModel):
         timeout_seconds: Positive HTTP timeout up to 300 seconds, default 60.
             This defines a setting; constructing it does not make an HTTP call.
         log_level: DEBUG, INFO, WARNING, or ERROR; defaults to INFO.
+        source_url: HTTPS dataset directory, defaulting to packaged JSON. Must
+            not contain credentials, a query, or a fragment. Supply only a trusted
+            source: syntax validation is not a network access-control policy.
 
     Result:
         A settings object with an absolute data_dir and derived raw_dir and
@@ -36,6 +48,7 @@ class PipelineSettings(BaseModel):
         Path resolution can inspect the filesystem and resolve symlinks, but no
         directories are created and writability is not checked. from_file()
         explicitly reads configuration; importing this module does not read it.
+        Direct construction also reads the packaged URL if source_url is omitted.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid", validate_default=True)
@@ -44,6 +57,17 @@ class PipelineSettings(BaseModel):
     data_dir: Path = Path("data")
     timeout_seconds: float = Field(default=60, gt=0, le=300, allow_inf_nan=False)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    source_url: HttpUrl = Field(default_factory=default_source_url)
+
+    @field_validator("source_url")
+    @classmethod
+    def validate_source_url(cls, value: HttpUrl) -> HttpUrl:
+        """Return a clean HTTPS base URL; reject embedded secrets and suffixes."""
+        if value.scheme != "https" or value.username or value.password:
+            raise ValueError("Source URL must use HTTPS without credentials.")
+        if value.query is not None or value.fragment is not None:
+            raise ValueError("Source URL must not contain a query or fragment.")
+        return value
 
     @classmethod
     def from_file(

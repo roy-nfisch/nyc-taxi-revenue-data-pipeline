@@ -2,8 +2,12 @@
 
 import logging
 
+import pytest
+
 from green_taxi.logging import configure_logging
 from green_taxi.settings import PipelineSettings
+
+pytestmark = pytest.mark.unit
 
 
 def test_logging_reuses_handler_without_changing_root():
@@ -15,7 +19,7 @@ def test_logging_reuses_handler_without_changing_root():
         first = configure_logging(PipelineSettings.from_file())
         handlers = first.handlers[:]
         second = configure_logging(
-            PipelineSettings(months=("2025-01",), log_level="DEBUG")
+            PipelineSettings.from_file().model_copy(update={"log_level": "DEBUG"})
         )
         assert second.handlers == handlers
         assert second.level == logging.DEBUG

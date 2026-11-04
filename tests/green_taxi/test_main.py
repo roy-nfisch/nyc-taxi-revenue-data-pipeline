@@ -9,6 +9,8 @@ from pydantic import ValidationError
 from green_taxi.__main__ import main
 from green_taxi.settings import DEFAULT_CONFIG, PipelineSettings
 
+pytestmark = pytest.mark.integration
+
 
 def test_packaged_defaults_are_loaded_without_writes(tmp_path, monkeypatch):
     """JSON supplies default months even outside the checkout directory."""

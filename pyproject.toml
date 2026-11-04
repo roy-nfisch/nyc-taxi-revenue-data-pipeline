@@ -16,6 +16,7 @@ dev = [
     "ipykernel>=7.3.0",
     "pytest>=9.1.1",
     "ruff>=0.14",
+    "pytest-xdist>=3.8",
 ]
 
 [build-system]
@@ -31,6 +32,11 @@ green_taxi = ["defaults.json"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--strict-markers"
+markers = [
+    "unit: isolated configuration and helper behaviour",
+    "integration: components working together with real local files or processes",
+    "data: dataset structure, content identity, and file publication checks",
+]
 
 [tool.ruff]
 target-version = "py313"

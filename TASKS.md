@@ -20,28 +20,29 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   146,475 records over 90 dates. This is inspection evidence, not an implemented
   pipeline or passing application tests. No application code or staged data was created.
 
+- [x] **T02 — Create the Python foundation.** Reviewed and merged in
+  [PR #2](https://github.com/roy-nfisch/mle-data-pipeline-project/pull/2).
+  Includes immutable Pydantic settings, JSON month selection, explicit file loading,
+  application logging, installable packaging, mirrored tests, and feature-branch/PR
+  CI. Expanded docstrings explain inputs, outputs, errors, and side effects.
+  Local checks passed 34 foundation tests, three reference tests, lint/format,
+  and package build. Configuration does not start downloads or Prefect.
+
+- [x] **T03 — Download and stage the files.** Implementation reviewed and accepted
+  on 04.11.2026; delivery is tracked in [PR #3](https://github.com/roy-nfisch/mle-data-pipeline-project/pull/3),
+  not yet merged. `TaxiDownloader` uses shared JSON months/source URL, validates
+  complete Parquet before reuse/publication, preserves old files on failed
+  refreshes, and returns input identities for lineage. Safe failure logs and shared
+  synthetic fixtures cover HTTP, interruption, corruption, and storage failures.
+  Real January–March download/reuse checks passed; raw files remain ignored.
+  Local verification passes 58 application tests (27 unit, 31 integration; 19
+  additionally labelled data), three reference tests, lint/format, and build.
+  CI separates categories and uses two integration workers without a duplicate
+  data job. Latest GitHub checks remain a merge gate, not a claimed result here.
+  No revenue outputs have been created.
+
 ## To do
 
-- [ ] **T02 — Create the Python foundation.** Add the package, settings validation,
-  logging, and test setup after design approval. Tests mirror source folders.
-  Design configuration and paths for host and container use, with no hard-coded
-  machine paths. Done when imports, a small test, and the first CI check pass;
-  no download or server startup at import time.
-  The original foundation passed local checks and PR #2 CI. Includes immutable
-  settings, isolated logging, an installable package, and CI on every branch push
-  and PR. Owner review remains pending; this is not yet marked done.
-  Review follow-up: expanded docstrings, moved month selection to packaged JSON,
-  added explicit file loading and command tests. Runtime validation checks month
-  format/calendar validity and uniqueness rather than a fixed Python list.
-  All 34 local foundation cases and three reference cases pass. Follow-up changes
-  have not been committed/pushed, so hosted CI has not checked that revision yet.
-- [ ] **T03 — Download and stage the files.** Download the three requested months.
-  Before merging its dependent PR, adapt downloader settings calls and month
-  options to the reviewed JSON configuration rather than repeat fixed choices.
-  Done when HTTP failures and interrupted downloads are tested, incomplete files
-  cannot be reused as complete files, and valid existing files can be reused.
-  Capture each input's source URL, filename, size, and SHA-256 for lineage; test
-  that changed contents are distinguishable even under the same filename.
 - [ ] **T04 — Build the daily calculation.** Apply only approved data rules and
   aggregate `fact_daily_revenue` by pickup day. Generate `dim_date` with a small
   pure helper, not a separate service. Done when small known examples cover
