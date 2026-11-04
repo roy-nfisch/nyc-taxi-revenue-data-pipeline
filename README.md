@@ -1,37 +1,90 @@
-# Data Pipeline Project
+# Green Taxi Daily Revenue Pipeline
 
-Use this repository as a **template** for your data pipeline project. You will build a pipeline that takes raw NYC taxi trip records and turns them into a processed result. The project is open-ended: the brief sets the goal, and the structure, tools, and implementation choices are yours to make. Create pull requests in your own copy even if you are working alone, and use them to track your progress.
+We are planning a small, object-oriented Python **batch ETL pipeline** that turns NYC Green
+Taxi rides into a daily revenue report. The focus is reliable downloads, clear
+data rules, useful tests, and a process someone else can run.
 
-## Learning Objectives
+**Status: plan agreed on 04.11.2026; implementation has not started.** The accepted
+data rules, simple OOD plan, and fact/date layout are in
+[ADR 001](docs/adr/001-pipeline-design.md). Docker and Prefect are required.
+Follow our progress in [TASKS.md](TASKS.md).
 
-By the end of this repository, you should be able to:
+## What we want to demonstrate
 
-- Write a script that downloads a public dataset into a local staging directory.
-- Build a pipeline that reads staged Parquet files and aggregates them into daily metrics.
-- Separate a pipeline into distinct extract, transform, and load stages.
-- Explain the difference between ETL and ELT, and justify which one your pipeline uses.
-- Orchestrate a pipeline with Prefect (stretch goal).
+Build a small taxi-data pipeline and test what happens when files are incomplete,
+records are invalid, and processing runs again.
 
-## Project Brief
+- Download January–March 2025 [NYC Green Taxi records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)
+  and keep the original Parquet files.
+- Apply agreed data rules and produce daily revenue facts with a date dimension.
+- Run the shared Python objects through Prefect inside Docker.
+- Check calculations, failure handling, and repeat runs with automated tests.
 
-In this project you are going to build a data pipeline that processes the `Green Taxi Trips` portion of the [NYC Taxi Trip dataset](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
+These are our goals, not claims of completed functionality.
 
-1. Write a script that downloads the data for the first three months of 2025 and stores it in a local staging directory.
-2. Write an ETL or ELT pipeline that reads the locally staged files, processes the data, and calculates revenue per day.
+## Planned flow
 
-Bonus task, if you have time:
+```mermaid
+flowchart LR
+    A[Download three monthly files] --> B[Keep raw Parquet files]
+    B --> C[Validate and apply agreed data rules]
+    C --> D[Group rides by pickup day]
+    D --> E[Save daily facts and the date dimension]
+```
 
-1. Use Prefect for workflow orchestration.
+The input has **one row per ride**; the fact table will have **one row per pickup
+day with accepted records**. This uses ETL: Python transforms the staged files before loading the
+finished report into output files. A database is not needed. It is **batch
+processing** because each run handles a fixed set of monthly files and finishes;
+it does not continuously process arriving events.
 
-## Learning Path
+Runs will be started manually through Prefect in Docker, with no automatic
+schedule initially. Rebuilding with the same inputs and rules must reproduce
+the reporting tables without doubling the results.
 
-### Additional Folders and Files
+## Planned reporting tables
 
-| File / Folder | Description |
+| Table | What it contains | Saved as |
+|---|---|---|
+| `fact_daily_revenue` | Pickup date, accepted ride count, and recorded total amount in USD, excluding cash tips | Parquet and CSV |
+| `dim_date` | All 90 calendar dates in January–March 2025, with year, month, and day of month | Parquet |
+
+The tables connect through `service_date`. Facts hold the measurements; the
+dimension describes the day. Calendar dates without facts do not become invented
+zero-revenue days. See the [layout and diagram](docs/adr/001-pipeline-design.md#fact-and-dimension-layout)
+for fields and checks. Run metadata will record which exact inputs, period,
+and code version produced the outputs, alongside included/excluded counts.
+See [run history and rebuilds](docs/adr/001-pipeline-design.md#run-history-and-rebuilds)
+for the agreed lineage fields and launch behaviour.
+
+## Technology choices
+
+| Technology | Why we plan to use it |
 |---|---|
-| [**solution**](solution/) | A complete local ETL implementation with its own README, scripts, package, and tests. |
-| [**pyproject.toml**](pyproject.toml) | Project configuration and dependencies. |
-| [**uv.lock**](uv.lock) | Dependency lock file. |
+| Python, pandas, and PyArrow | Read Parquet and calculate daily totals using tools already in the project. |
+| Requests | Download source files with explicit timeouts and HTTP error handling. |
+| Pydantic | Validate run settings, such as months and paths; table checks stay in pandas. This would be a new dependency. |
+| pytest and GitHub Actions | Check calculations and a small end-to-end run without downloading the full dataset in CI. |
+| uv | Reuse the project's environment and lock file. |
+| Prefect — required | Coordinate downloading, calculation, and saving with visible task states and bounded retries for transient failures. |
+| Docker and Compose — required | Run the pipeline and local Prefect services with configured paths, persistent data, and checked ports. |
+
+No ML model, API, dashboard, dbt, streaming broker, or cloud deployment is planned.
+Docker, Prefect, and automated checks are part of our deliverable. We will design for container
+execution from the start, not add a separate container-only implementation.
+
+## Repository map
+
+```text
+README.md                         Project goal, scope, and setup
+TASKS.md                          Work and completion checks
+docs/adr/001-pipeline-design.md    Accepted rules, object responsibilities, and table layout
+pyproject.toml / uv.lock          Existing environment
+solution/                         Supplied reference; remove before public release
+```
+
+Our future `src/green_taxi/` package and matching `tests/green_taxi/` structure
+are planned in the ADR. Those folders do not exist yet.
 
 ## Setup
 
@@ -39,83 +92,22 @@ Use [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13.5 or newe
 and Python 3.13.17 or a newer 3.13 patch release, as defined in
 [`.python-version`](.python-version).
 
-> [!NOTE]
-> Throughout these steps, text in angle brackets like `<repo-name>` is a **placeholder**. Replace it, including the `< >` brackets, with your own value. For example, `cd <repo-name>` becomes `cd mle-data-pipeline-project`.
-
-### 1. Create the Repository from the Template
-
-Click **Use this template** on GitHub.
-
-When creating the repository:
-
-- Set yourself as the **Owner**
-- Choose a repository name
-- Disable **Include all branches**
-- Click **Create repository**
-
-> [!IMPORTANT]
-> If you are working in pairs or groups, only **one person** should complete this step.
-
----
-
-### 2. Add Collaborators (Pairs/Groups Only)
-
-If working with teammates:
-
-1. Open the repository on GitHub
-2. Go to **Settings → Collaborators**
-3. Add your teammates as collaborators
-4. Share the repository link with your team
-
-Teammates should accept the invitation before continuing.
-
----
-
-### 3. Clone the Repository
-
-Copy the SSH URL from the **Code** button on GitHub, then run:
-
-```bash
-git clone <copied-ssh-url>
-```
-
-The copied SSH URL will look like `git@github.com:<your-username>/<repo-name>.git`.
-
----
-
-### 4. Move into the Project Folder and Install Dependencies
+### Prepare the environment
 
 This installs all dependencies and creates a virtual environment in `.venv/`.
 
 ```bash
-cd <repo-name>
+git clone https://github.com/roy-nfisch/mle-data-pipeline-project.git
+cd mle-data-pipeline-project
 uv sync
 ```
 
----
+This prepares the existing environment; it does not run our future
+pipeline. Run instructions will be added when the implementation is verified.
 
-### 5. Open the Repository in VS Code
+## Acknowledgements
 
-> [!NOTE]
-> Make sure you open VS Code from the project root so it automatically detects the environment created by `uv sync`.
-
-Launch VS Code in the project root folder:
-
-```bash
-code .
-```
-
-If you create a notebook to explore the data, select the Python environment created by `uv sync` as the kernel.
-
-## Reference Solution
-
-This repository includes a complete local reference implementation in [solution/](solution/).
-Use it to compare implementation choices and expected outputs. It is one way to solve the project, not the required structure for yours.
-
-See [solution/README.md](solution/README.md) for how to run it and how its files fit together.
-
-## Answer the Following Questions
-
-1. What are the steps you took to complete the project?
-2. What challenges did you face?
-3. What would you do differently if you had more time?
+This project started from a neue fische course brief and supplied reference
+implementation, currently in [solution/](solution/README.md). Our implementation
+will stay separate; the reference folder is planned for removal before public
+release. The original notice remains in [LICENSE](LICENSE).
