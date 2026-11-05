@@ -200,26 +200,25 @@ Exact file boundaries can change if implementation demonstrates a simpler struct
 
 ## Implementation steps after approval
 
-1. Make a separate, behaviour-preserving change to move ETL-specific modules and
-   tests into `etl/` and extract the shared reporting contracts/helpers. Update
-   imports, packaging, CI paths and documentation where affected. Keep existing
-   documented commands, Docker/Compose behaviour and outputs working; use thin
-   delegates for existing module entry points where needed. Verify the ETL
-   baseline before adding DuckDB or implementing ELT.
-2. Add DuckDB as an explicit optional dependency; keep ETL runnable without it.
-3. Implement transactional raw loading and source identity tracking with tiny
-   fixtures, including unchanged, changed and failed loads.
-4. Implement SQL transformation and output conversion. Compare every date,
-   ride count, exact amount, exclusion count and date reference with ETL.
-   Return the existing writer's expected types, including finite Decimal money,
-   Python integer counters and the same date-dimension contract.
-5. Add a separate manual Python/Prefect entry point and Docker instructions.
-   Keep the current default command and published ETL image behavior unchanged.
-   Verify ELT from an installed package and a built container, with the optional
-   DuckDB dependency and named SQL files included. Also verify ordinary ETL
-   without that optional dependency; a checkout-only run is not sufficient.
-6. Run both paths on the same real January–March source bytes, repeat them, and
-   document equal results plus the extra storage and complexity ELT introduces.
+The checklist, dependencies, file ownership and PR boundaries live in
+[T11.1–T11.7](../../TASKS.md#t11-delivery-plan), not a second checklist here.
+
+First move the ETL modules/tests in a behaviour-preserving PR, keeping existing
+commands and outputs working. Then agree the raw representation and warehouse
+interfaces, optional dependency and SQL packaging in a foundation PR.
+Only after that merges can raw loading, transformation SQL and Docker preparation
+run in parallel on separate branches. A final integration PR connects the objects
+and verifies both paths before any image publication.
+
+SQL results must satisfy the shared writer's types: finite Decimal money, Python
+integer counters and the same date-dimension contract. Acceptance includes an
+installed-package and container ELT run with the optional dependency and packaged
+SQL, plus ordinary ETL without DuckDB; checkout-only execution is insufficient.
+Compare both paths using the same real source bytes and repeat the runs.
+
+Publish only after explicit approval and merged verification. Use a clearly
+identified ELT image variant/package; preserve the existing ETL image and its
+default behaviour. Image publication does not deploy a public service.
 
 Acceptance is equivalent checked output and safe reruns, not just a successful
 SQL query. The original reviewed files give 146,475 accepted rides, 90 daily
