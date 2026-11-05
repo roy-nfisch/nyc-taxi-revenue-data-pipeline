@@ -118,7 +118,6 @@ def compose_project(tmp_path):
     config.write_text(
         json.dumps(
             {
-                "months": ["2032-02"],
                 "reporting_period": {
                     "start_month": "2032-02",
                     "duration_months": 1,

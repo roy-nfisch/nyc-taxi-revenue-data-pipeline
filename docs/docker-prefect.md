@@ -90,6 +90,17 @@ if you choose another JSON filename. Then opt into the override:
 docker compose -f compose.yaml -f compose.config.yaml run --rm flow
 ```
 
+To refresh the custom period deliberately, keep the config argument when
+replacing the service command:
+
+```bash
+docker compose -f compose.yaml -f compose.config.yaml run --rm flow \
+  python -m green_taxi.flow --config /run-config/run.json --data-dir /data --force
+```
+
+The earlier refresh command without the override uses packaged defaults, not
+your local JSON.
+
 For the plain batch without Prefect:
 
 ```bash

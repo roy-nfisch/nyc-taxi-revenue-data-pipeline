@@ -142,8 +142,8 @@ for the agreed lineage fields and launch behaviour.
 | Docker and Compose — required | Run the pipeline and local Prefect services with configured paths, persistent data, and checked ports. |
 
 No ML model, API, dashboard, dbt, streaming broker, or cloud deployment is planned.
-Docker, Prefect, and automated checks are part of our deliverable. We will design for container
-execution from the start, not add a separate container-only implementation.
+Docker, Prefect, and automated checks are part of our deliverable. Local and
+container execution share the same Python objects.
 
 ## Repository map
 
@@ -251,7 +251,7 @@ from green_taxi.settings import PipelineSettings
 settings = PipelineSettings.from_file()  # Packaged JSON defaults
 ```
 
-For a future container, `--data-dir /data` overrides JSON storage with a mount.
+In Docker, `--data-dir /data` overrides JSON storage with the mounted data volume.
 Configuration does not create directories. Tests use temporary paths, not our
 real dataset. CI also checks the supplied reference tests separately.
 

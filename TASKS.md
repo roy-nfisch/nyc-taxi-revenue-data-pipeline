@@ -153,7 +153,7 @@ skipped there), all 13 Docker smoke/contract tests passed when enabled, and thre
 tests, lint/format, package/image builds, and Compose configuration passed. Real
 container facts/calendar matched the reviewed host tables; a rebuild reused
 inputs and preserved 146,475 rides / $3,395,290.56. Down/up preserved run history
-and data. Both tasks remain awaiting review; GitHub CI has not been verified.
+and data. Both tasks remain awaiting review.
 
 Review follow-up: limit retryable server responses to HTTP 500–599; validate all
 Compose profiles in CI. Added full-flow failure propagation, CLI option forwarding,
@@ -162,13 +162,23 @@ contracts. No new service or application abstraction was needed.
 Additional requested follow-up: writable UI bundle directory and HTML-aware
 health check; opt-in Compose end-to-end check using private named volumes and
 the default user; optional image build provenance; ignored local config folder.
-New/updated tests for this follow-up have not been run pending explicit approval.
+These follow-up checks passed in GitHub CI for commit `9915519`; they were not
+rerun locally during the PR audit.
 Settings now derive source months from the reporting period when `months` is
 omitted. Defaults and the local example require one period edit; an explicit
 source list remains supported. Added year-rollover and invalid-duration cases;
-these new tests have not been run.
+these cases passed in GitHub CI for commit `9915519`.
 The save task now logs the saved report's period, ride/day counts, and total in
 Prefect after successful publication, without repeating the calculation.
+CI verified on 05.11.2026: the push run
+[42025803602](https://github.com/roy-nfisch/mle-data-pipeline-project/actions/runs/42025803602)
+passed lint/format, reference tests, package build, unit/integration tests, and
+Docker checks. In the separate PR run, checks, unit tests, and Docker checks have
+passed; integration tests were still pending at this review.
+Audit follow-up adds custom-config refresh instructions, updates stale container
+and layout descriptions, and removes explicit months from the Compose end-to-end
+fixture so it exercises automatic period selection. These latest edits have not
+been tested; the next CI run must verify them before merge.
 Enforced single-writer locking, digest/signed provenance, and measured image-size
 optimization remain future hardening, not extra requirements for this local demo.
 

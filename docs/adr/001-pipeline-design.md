@@ -64,17 +64,20 @@ queries, and fragments are rejected; .env/secret handling is not needed for this
 public source. Technical buffer sizes stay named constants, not deployment settings.
 
 Design for Docker from the start: configure paths, mount raw/output storage,
-and keep container setup outside the calculation objects. Compose will run the
+and keep container setup outside the calculation objects. Compose runs the
 pipeline and local Prefect services; check host ports before starting. Prefect
 coordinates execution, while the Python objects own the data rules. Local Python
 and container execution must share that logic, not become two implementations.
 An alternative orchestrator would need a documented decision before switching.
 
-Target layout (local pipeline and report writing exist; orchestration remains planned):
+Implemented layout:
 
 ```text
-src/green_taxi/           settings.py, download.py, revenue.py, report.py, pipeline.py, cli.py
+src/green_taxi/           Settings, download, calculation, report, pipeline, flow, and __main__.py
 tests/green_taxi/         Matching test modules; small fixtures, no live downloads in CI
+tests/docker/            Image and Compose checks with synthetic inputs
+compose*.yaml            Local Prefect services and optional read-only config mount
+Dockerfile               Non-root packaged application
 data/raw/                Original downloaded files — ignored
 data/processed/          Generated fact/date tables and run counts — ignored
 solution/                Supplied reference; remove before public release
