@@ -226,19 +226,9 @@ cloud deployment, or registry publishing is needed.
 Keep the reference unchanged during development and remove its folder before
 public release. Retain source attribution and the existing license notice.
 
-## Acceptance record — 04.11.2026
+## Run and publication boundaries
 
-- [x] Inspect real data and source definitions; owner approved revenue and date rules.
-- [x] Agree on exclusions, negative values, duplicate handling, and exact money.
-- [x] Agree on the simple OOD plan and fact/date outputs; owner approved the layout.
-- [x] Require Docker and Prefect and define completion checks. Runtime verification
-  belongs to the implementation tasks, not this planning approval.
-- [x] Explicitly identify batch processing and agree on lineage metadata and
-  manual-run/rebuild behaviour (04.11.2026 follow-up).
-
-Record later decision changes here. Implementation progress belongs in
-[TASKS.md](../../TASKS.md). The downloader stages raw files only; calculation and
-writing are connected by the explicit --run command. Docker and Prefect execution
-are not implemented yet. Report files stage together, replace individually, and
+The downloader stages raw files only; calculation and writing are connected by
+the explicit --run command. Report files stage together, replace individually, and
 publish metadata last. If replacement fails, metadata is removed; the directory
 must be rebuilt before use. Concurrent runs are not supported.

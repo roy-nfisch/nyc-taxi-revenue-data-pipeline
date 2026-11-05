@@ -300,7 +300,6 @@ nyc-taxi-revenue-data-pipeline/
 ├── Dockerfile, compose.yaml        # Application and local Prefect runtime
 ├── compose.config.yaml             # Read-only host JSON override
 ├── .env.example                    # Optional Compose settings
-├── TASKS.md                        # Progress and next steps
 └── pyproject.toml, uv.lock         # Package and locked dependencies
 ```
 
@@ -327,7 +326,6 @@ its named volume rather than the host `data/` directory.
 - [Exploration notebook](notebooks/01-explore-green-taxi.ipynb): inspect one staged file without changing it.
 - [Docker and Prefect](docs/docker-prefect.md): configuration, storage and troubleshooting.
 - [Image publishing](docs/docker-prefect.md#publish-to-ghcr): manual release steps and approval gates.
-- [Task list](TASKS.md): reviewed work and planned follow-ups.
 
 The project uses [NYC TLC Green Taxi records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
 This project was developed as part of the neue fische Machine Learning Engineering

@@ -3,8 +3,7 @@
 This document distinguishes the existing Python ETL from the planned database-first
 ELT. Only optional ELT dependency setup and registry DDL exist so far; there is no
 runnable ELT pipeline.
-The design and delivery plan remain in [ADR 002](adr/002-elt-comparison.md) and
-[TASKS.md](../TASKS.md#t11-delivery-plan).
+The design is described in [ADR 002](adr/002-elt-comparison.md).
 
 | | ETL — implemented | ELT — proposed |
 |---|---|---|
@@ -60,8 +59,8 @@ The loader must verify a lossless mapping for a source before publishing its
 table and registry entry. Unknown or lossy mappings stop the batch explicitly;
 never silently stringify, round, drop columns or strip timezone information.
 Automatic schema evolution is not part of this project. This foundation does
-not yet claim that every Parquet type is supported; T11.3 must document and test
-the supported mappings, including the mixed-type required-column fixtures.
+not yet claim that every Parquet type is supported; raw loading must document
+and test the supported mappings, including mixed-type required-column fixtures.
 Boolean amounts and aware pickups are invalid *rows* under our rules, not reasons
 to reject an otherwise representable source. SQL counts their exclusions.
 
@@ -71,7 +70,7 @@ A failed replacement rolls back both. A failure on any selected source stops the
 run before calculation/publication, even if earlier source loads committed.
 Two different source filenames with the same bytes must both contribute.
 
-## Object boundary for the next tasks
+## Object responsibilities
 
 ### Per-source SQL boundary
 
@@ -110,10 +109,10 @@ the final adapter converts exact integer cents, not float currency values.
 `trip_count` and `revenue_cents`. `counts.sql` produces the existing `COUNT_FIELDS`
 and a separate sub-cent failure count. Combine per-source daily totals/counters
 inside DuckDB using the common classified shape; never union differently typed
-raw columns or aggregate ride values in Python. T11.6 converts the checked results
-into `RevenueResult` and reuses the existing calendar helper.
+raw columns or aggregate ride values in Python. The result adapter will convert
+the checked results into `RevenueResult` and reuse the existing calendar helper.
 
-T11.4 fixtures must exercise the same boundary independently of the loader:
+SQL fixtures must exercise the same boundary independently of the loader:
 ordinary numeric rides, a separate boolean-amount source, a timezone-aware source,
 and invalid/out-of-period text rows. Compare all outputs and failure outcomes with
 ETL. This describes the query interface, not implemented transformation SQL.
@@ -129,12 +128,12 @@ These are proposed method contracts for review, not placeholder Python methods:
 | `warehouse.load(inputs)` | Nonempty, distinct staged inputs. | Return `None` only after all selected sources are registered. Verify staged identity and schemas; propagate errors, never skip a failed file. |
 | `warehouse.calculate(inputs, period)` | The same selected inputs and validated `ReportingPeriod`. | Return the existing `RevenueResult`; reject missing or mismatched registry entries. Only selected sources contribute. |
 
-T11.3 owns connection/raw loading and `schema.sql`. T11.4 owns classification,
-aggregation and counter SQL against the agreed source tables; its fixtures can
-create tiny tables directly without importing an unfinished loader. T11.6 wires
-query execution and result conversion into `calculate`, then connects Prefect
-and the existing report writer. Do not add empty methods or a generic backend
-interface just to let branches start early.
+Raw loading owns the connection and `schema.sql`. Transformations use
+classification, aggregation and counter SQL against the agreed source tables;
+their fixtures can create tiny tables directly without importing the loader.
+The planned coordinator connects query execution and result conversion through
+`calculate`, then connects Prefect and the existing report writer. Avoid empty
+methods or a generic backend interface without a concrete need.
 
 Query inputs use bound parameters; generated table identifiers must be validated
 and quoted separately. Do not interpolate arbitrary filenames or settings into SQL.

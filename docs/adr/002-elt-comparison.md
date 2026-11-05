@@ -26,7 +26,7 @@ requirement for ELT.
 Prefect coordinates download, raw load, transform and save. It does not own the
 SQL or copy the data rules. Local Python and Docker use the same objects.
 
-The concrete raw-storage layout, warehouse operation contracts and task ownership
+The concrete raw-storage layout, warehouse operation contracts and responsibilities
 are recorded in the [ETL and ELT contracts](../etl-elt-contract.md). Raw records use
 one table per source file, with original Arrow schema metadata stored in the
 source registry rather than forcing different files into one common column type.
@@ -207,17 +207,11 @@ component tests remain at package level. New tests mirror `elt/`, reuse existing
 fixtures, and use `test_parity.py` for comparisons rather than copy the ETL suite.
 Exact file boundaries can change if implementation demonstrates a simpler structure.
 
-## Implementation steps after approval
+## Integration and acceptance
 
-The checklist, dependencies, file ownership and PR boundaries live in
-[T11.1–T11.7](../../TASKS.md#t11-delivery-plan), not a second checklist here.
-
-First move the ETL modules/tests in a behaviour-preserving PR, keeping existing
-commands and outputs working. Then agree the raw representation and warehouse
-interfaces, optional dependency and SQL packaging in a foundation PR.
-Only after that merges can raw loading, transformation SQL and Docker preparation
-run in parallel on separate branches. A final integration PR connects the objects
-and verifies both paths before any image publication.
+Keep existing ETL commands and outputs working. The ELT coordinator connects
+raw loading, SQL transformation and reporting through the shared contracts.
+Verify both paths before any image publication.
 
 SQL results must satisfy the shared writer's types: finite Decimal money, Python
 integer counters and the same date-dimension contract. Acceptance includes an
@@ -243,5 +237,5 @@ The design was reviewed and merged in PR #11:
 
 The ETL folder move is merged. The current foundation adds the optional dependency,
 registry DDL and contracts only. Loading, SQL business transformations, ELT images
-and persistent data storage remain later tasks. The per-source query boundary is
-specified in the foundation contract before the parallel tasks start.
+and persistent data storage are developed separately. The per-source query
+boundary is specified in the foundation contract.

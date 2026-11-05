@@ -1,7 +1,8 @@
 # ELT SQL transformations
 
-T11.4 adds packaged SQL resources, not a runnable ELT command or warehouse
-executor. T11.6 will connect execution, result conversion and checked publication.
+These packaged SQL resources do not yet provide a runnable ELT command or
+warehouse executor. Execution, result conversion and checked publication still
+need to be connected.
 The source/type interface remains defined in [the contract](etl-elt-contract.md).
 
 ## Query boundary
@@ -14,7 +15,7 @@ package data; execution does not depend on the terminal's working directory.
 must validate a registered table name against `source_[0-9]{4}_(0[1-9]|1[0-2])`
 and quote the schema and table separately, for example
 `"raw"."source_2025_01"`. Never insert a filename, path or arbitrary SQL.
-The test helper demonstrates that boundary; a production executor is T11.6 work.
+The test helper demonstrates that boundary; the application executor is not yet implemented.
 
 Bind `period_start`, `period_end`, `pickup_kind` and `amount_kind` as values.
 The period is start-inclusive/end-exclusive. Derive validated kind labels from
@@ -86,10 +87,8 @@ checks the original float bits with that metadata present. The separate fix
 therefore concerns the ETL's Arrow-to-pandas dtype/metadata exposure, not only
 large integers.
 
-The owner approved a separately scoped ETL representation fix. The SQL PR
-remains draft until that fix is reviewed and combined parity is verified
-against the corrected baseline. Ordinary numeric, boolean,
-aware-timestamp, invalid text,
+Full ETL/ELT parity requires the ETL representation fix and comparison against
+the corrected baseline. Ordinary numeric, boolean, aware-timestamp, invalid text,
 exclusion precedence, counters, duplicate sources, exact large-money and
 sub-cent cases are compared with ETL. These dtype/metadata counterexamples
-prevent claiming universal ETL/ELT parity or completing T11.4.
+prevent claiming universal ETL/ELT parity against the uncorrected baseline.
