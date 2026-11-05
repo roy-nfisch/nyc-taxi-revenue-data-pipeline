@@ -1,6 +1,7 @@
 """Connect staging, calculation, and report writing without copying their rules."""
 
 import logging
+import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,13 +19,19 @@ def code_identity() -> dict:
     """Return checkout revision/dirty status, or explicit unknowns when unavailable.
 
     Inspect only this package's checkout, not an unrelated caller's repository.
-    Installed wheels without a checkout have no assumed revision. Git calls are
+    Installed wheels report supplied build metadata, or explicit unknowns. Git calls are
     bounded and read-only; unavailable Git does not prevent data processing.
     """
     root = Path(__file__).resolve().parents[2]
     unknown = {"revision": "unknown", "dirty": "unknown"}
     if not (root / ".git").exists():
-        return unknown
+        dirty = {"true": True, "false": False}.get(
+            os.environ.get("GREEN_TAXI_BUILD_DIRTY", ""), "unknown"
+        )
+        return {
+            "revision": os.environ.get("GREEN_TAXI_BUILD_REVISION") or "unknown",
+            "dirty": dirty,
+        }
     try:
         revision = subprocess.run(
             ["git", "rev-parse", "HEAD"],

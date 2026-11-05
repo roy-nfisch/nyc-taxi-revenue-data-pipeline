@@ -148,7 +148,7 @@ T08 and T09 can be developed together now that the local pipeline is verified.
 Both must pass before we resume T07 so its documentation covers the actual
 Docker and Prefect commands, not a planned setup.
 
-Local verification: 215 native application tests passed (13 opt-in Docker tests
+Prior verification, before the latest follow-up: 215 native application tests passed (13 opt-in Docker tests
 skipped there), all 13 Docker smoke/contract tests passed when enabled, and three reference
 tests, lint/format, package/image builds, and Compose configuration passed. Real
 container facts/calendar matched the reviewed host tables; a rebuild reused
@@ -159,6 +159,12 @@ Review follow-up: limit retryable server responses to HTTP 500–599; validate a
 Compose profiles in CI. Added full-flow failure propagation, CLI option forwarding,
 forced-refresh retry behavior, saved container values, and loopback/persistence
 contracts. No new service or application abstraction was needed.
+Additional requested follow-up: writable UI bundle directory and HTML-aware
+health check; opt-in Compose end-to-end check using private named volumes and
+the default user; optional image build provenance; ignored local config folder.
+New/updated tests for this follow-up have not been run pending explicit approval.
+Enforced single-writer locking, digest/signed provenance, and measured image-size
+optimization remain future hardening, not extra requirements for this local demo.
 
 ## After Docker and Prefect
 

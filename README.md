@@ -153,6 +153,7 @@ tests/green_taxi/     Mirrored unit/integration tests and shared fixtures
 tests/docker/        Opt-in image and Compose contract checks
 docs/                Design decisions, data review, Docker/Prefect guide, and demo
 data/                Local raw files, reports, and original demo media — ignored
+config/local/        Optional local JSON configurations — ignored
 Dockerfile           Non-root image for the batch and local Prefect server
 compose.yaml         Project network, persistent volumes, and manual run services
 compose.config.yaml  Optional read-only custom JSON mount for batch services
@@ -316,10 +317,11 @@ uv run --locked python -m green_taxi.download
 
 This downloads January–March 2025 to ignored `data/raw/`. Run it again to reuse
 validated files. To choose other months, put the selection in a local JSON file,
-for example `{"months": ["2025-01"]}` in `run.json`, then run:
+for example `{"months": ["2025-01"]}` in ignored `config/local/run.json` (create
+the directory first), then run:
 
 ```bash
-uv run --locked python -m green_taxi.download --config run.json --data-dir ./data
+uv run --locked python -m green_taxi.download --config config/local/run.json --data-dir ./data
 ```
 
 The same settings loader validates both commands; there is no separate hardcoded
@@ -350,7 +352,7 @@ logging does not retry automatically or hide a failed run.
 ```bash
 uv run --locked python -m green_taxi --run
 # Optional custom configuration or container storage:
-uv run --locked python -m green_taxi --run --config run.json --data-dir ./data
+uv run --locked python -m green_taxi --run --config config/local/run.json --data-dir ./data
 ```
 
 Without `--run`, the command still only prints validated settings. Add `--force`
@@ -366,7 +368,8 @@ The command prints the saved `metadata.json` path. In ignored `data/processed/`:
 | `dim_date.parquet` | Every calendar day in the reporting period |
 | `metadata.json` | Run ID, UTC times, resolved period, input URLs/sizes/SHA-256, code revision/dirty status, totals, and output row counts |
 
-Code identity is explicitly `unknown` if no checkout/Git is available. The finish
+Code identity uses Git in a checkout or an optional image build stamp. It stays
+explicitly `unknown` when neither is available; see the container guide. The finish
 timestamp is captured after staging the tables, just before publication. Run IDs,
 times, and download/reuse flags may differ between otherwise equivalent rebuilds.
 

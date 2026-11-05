@@ -67,6 +67,9 @@ jobs:
       - run: uv sync --locked
       - run: docker compose --profile manual config --quiet
       - run: docker compose build
+        env:
+          BUILD_REVISION: ${{ github.sha }}
+          BUILD_DIRTY: "false"
       - run: uv run --locked pytest tests/docker/ -q
         env:
           GREEN_TAXI_DOCKER_TESTS: "1"

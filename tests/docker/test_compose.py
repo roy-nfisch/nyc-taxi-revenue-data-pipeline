@@ -52,6 +52,11 @@ def test_api_is_loopback_only_and_waits_for_health(services):
         services["flow"]["environment"]["PREFECT_SERVER_ALLOW_EPHEMERAL_MODE"]
         == "false"
     )
+    assert (
+        services["prefect"]["environment"]["PREFECT_UI_STATIC_DIRECTORY"]
+        == "/home/app/ui"
+    )
+    assert "http://127.0.0.1:4200/" in services["prefect"]["healthcheck"]["test"][-1]
 
 
 def test_history_and_data_use_separate_persistent_volumes(services):
@@ -146,7 +151,8 @@ def dotenv_project(tmp_path):
     (tmp_path / ".env").write_text(
         template.replace("PREFECT_PORT=4205", "PREFECT_PORT=4217")
     )
-    (tmp_path / "run.local.json").write_text("{}")
+    (tmp_path / "config/local").mkdir(parents=True)
+    (tmp_path / "config/local/run.json").write_text("{}")
     excluded = {
         "PREFECT_PORT",
         "TAXI_CONFIG_FILE",
@@ -182,7 +188,7 @@ def test_dotenv_is_loaded_without_exporting_compose_settings(dotenv_project, cus
         mounts = {mount["target"]: mount for mount in services[name]["volumes"]}
         if custom:
             assert mounts["/run-config/run.json"]["source"] == str(
-                folder / "run.local.json"
+                folder / "config/local/run.json"
             )
             assert mounts["/run-config/run.json"]["read_only"] is True
         else:

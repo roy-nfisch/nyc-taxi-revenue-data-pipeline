@@ -3,7 +3,11 @@ name: green-taxi
 x-runtime: &runtime
   init: true
   image: green-taxi:local
-  build: .
+  build:
+    context: .
+    args:
+      BUILD_REVISION: ${BUILD_REVISION:-unknown}
+      BUILD_DIRTY: ${BUILD_DIRTY:-unknown}
   networks: [taxi-network]
 
 services:
@@ -15,10 +19,19 @@ services:
     environment:
       PREFECT_SERVER_UI_API_URL: "http://127.0.0.1:${PREFECT_PORT:-4205}/api"
       PREFECT_SERVER_ANALYTICS_ENABLED: "false"
+      PREFECT_UI_STATIC_DIRECTORY: /home/app/ui
     volumes:
       - prefect-state:/home/app/.prefect
     healthcheck:
-      test: [CMD, /app/.venv/bin/python, -c, "from urllib.request import urlopen; urlopen('http://127.0.0.1:4200/api/health', timeout=3)"]
+      test:
+        - CMD
+        - /app/.venv/bin/python
+        - -c
+        - >-
+          from urllib.request import Request, urlopen;
+          urlopen('http://127.0.0.1:4200/api/health', timeout=3);
+          page = urlopen(Request('http://127.0.0.1:4200/', headers={'Accept': 'text/html'}), timeout=3);
+          assert 'text/html' in page.headers.get('Content-Type', '') and b'<html' in page.read().lower()
       interval: 5s
       timeout: 5s
       start_period: 45s

@@ -13,3 +13,4 @@ dist
 .env
 .env.*
 run.local.json
+config/local

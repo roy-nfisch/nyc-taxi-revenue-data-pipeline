@@ -18,7 +18,7 @@ reads this local file; Python does not load it. It contains only:
 
 ```dotenv
 PREFECT_PORT=4205
-TAXI_CONFIG_FILE=./run.local.json
+TAXI_CONFIG_FILE=./config/local/run.json
 ```
 
 `.env` chooses the host UI port and the optional JSON file to mount. Pipeline
@@ -70,10 +70,13 @@ with the same name takes precedence over `.env`; unset it if an edit seems ignor
 
 Normal Compose runs use the packaged `defaults.json`; no host config file is
 required. For another start month, duration, or source selection, copy the defaults
-and edit the JSON. `run.local.json` is excluded from Git and the Docker build context:
+and edit the JSON. Keep local JSON files under `config/local/` (or outside this
+repository). The entire local-config directory is excluded from Git and image
+builds, regardless of the filename:
 
 ```bash
-cp src/green_taxi/defaults.json run.local.json
+mkdir -p config/local
+cp src/green_taxi/defaults.json config/local/run.json
 ```
 
 Keep `duration_months` a positive integer, not a quoted string or float. `months`
@@ -100,7 +103,10 @@ Custom runs replace the current report in that volume; they are not a separate
 report archive. Run only one batch at a time. To return to packaged defaults,
 omit `-f compose.config.yaml` again; no image rebuild or Python change is needed.
 Setting `TAXI_CONFIG_FILE` in `.env` alone does not enable a custom mount, so base
-Compose still works even when `run.local.json` has not been created.
+Compose still works even when `config/local/run.json` has not been created.
+Existing `.env` files pointing to `run.local.json` remain supported; move that
+file yourself and update `.env` when convenient. Renaming another JSON file in
+the repository does not automatically make it ignored; use the local directory.
 
 ## Where things live
 
@@ -125,12 +131,26 @@ docker compose logs --tail 50 prefect
 docker compose ps
 ```
 
-The installed package has no Git checkout, so its code revision is explicitly
-`unknown`; input checksums and run IDs are still recorded. Do not interpret this
-as a clean Git revision. Result tables are not stored as Prefect pickles or cached
+The image records optional `BUILD_REVISION` and `BUILD_DIRTY` build arguments in
+run metadata; the revision is also an OCI image label. CI supplies its checkout
+SHA and `false` for a clean checkout. Local builds default to `unknown`, not an
+invented clean revision. For a local build, supply a revision and explicitly mark
+uncommitted changes, for example:
+
+```bash
+BUILD_REVISION="$(git rev-parse HEAD)" BUILD_DIRTY=true docker compose build
+```
+
+Use `false` only for a clean source checkout. This is a build stamp, not a signed
+proof or an image digest. The installed package has no Git checkout to inspect.
+Result tables are not stored as Prefect pickles or cached
 between runs. Prefect stores task/run states; our writer owns the report files.
 
 ## Retries and checks
+
+The server writes generated UI bundles to `/home/app/ui`, not the root-owned
+installed package. Its health check requires both API health and a served HTML
+page; an API-only success does not prove that the dashboard is available.
 
 Download gets at most three attempts (two retries, with one- and three-second
 delays). Retry timeouts, connection interruptions, HTTP 429 and 5xx responses.
@@ -151,6 +171,10 @@ execution, known saved values and rebuilds, plus the rendered Compose contracts
 for loopback ports, health dependencies, persistent volumes, and manual profiles.
 They use tiny temporary inputs, not the public dataset; ordinary tests skip them
 unless explicitly enabled. CI validates Compose with the manual profile enabled.
+The end-to-end Compose check uses an isolated project, the default non-root user,
+tiny synthetic input in its own named volume, and a custom read-only JSON. It
+checks the real UI/JS bundle, flow/task states, rebuild, and restart persistence,
+then removes only that test project's containers, network, and volumes.
 Prefect integration tests use an isolated temporary server, not this Compose
 server. Docker CI uses an Ubuntu 24.04 VM because `ubuntu-slim` is not our Docker
 build/test runner; unit and integration jobs retain their existing slim runner.
