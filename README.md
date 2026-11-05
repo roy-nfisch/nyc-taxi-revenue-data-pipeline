@@ -186,6 +186,9 @@ Outputs are `fact_daily_revenue.parquet`, a CSV copy, `dim_date.parquet` and
   included. We retain zero and negative amounts rather than assuming they are errors.
 - Invalid dates/amounts and out-of-period pickups are excluded and counted.
   Results describe these source files, not every ride in the city.
+- Parquet numeric types are preserved before money validation; finite sub-cent
+  amounts stop the run rather than being rounded. See the
+  [numeric precision notes](docs/etl-parquet-precision.md), including float32.
 - Checksums and metadata identify the inputs and run; they do not prove fares are correct.
 - Reports are not saved as one transaction. A failed save can leave mixed files;
   resolve the error and rerun. Existing reports do not prove a new run succeeded.

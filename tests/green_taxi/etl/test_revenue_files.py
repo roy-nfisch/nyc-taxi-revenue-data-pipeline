@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 from decimal import Decimal, localcontext
 
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 from pandas.testing import assert_frame_equal
 
@@ -145,6 +147,134 @@ def test_subcent_stops_instead_of_rounding(reporting_settings, trip_file):
         "precision.parquet", [reporting_settings.reporting_period.start], [0.001]
     )
     with pytest.raises(ValueError, match="Sub-cent"):
+        DailyRevenueCalculator(reporting_settings.reporting_period).calculate([path])
+
+
+@pytest.mark.parametrize("pandas_metadata", [False, True])
+@pytest.mark.parametrize(
+    "value, arrow_type, pandas_type",
+    [(2**53 + 1, pa.int64(), "Int64"), (2**64 - 1, pa.uint64(), "UInt64")],
+)
+def test_nullable_integer_amount_is_not_promoted_to_float(
+    reporting_settings, tmp_path, value, arrow_type, pandas_type, pandas_metadata
+):
+    """Preserve integer cents beyond float64 precision, with or without metadata."""
+    pickups = [reporting_settings.reporting_period.start] * 2
+    if pandas_metadata:
+        table = pa.Table.from_pandas(
+            pd.DataFrame(
+                {
+                    "lpep_pickup_datetime": pickups,
+                    "total_amount": pd.array([value, None], dtype=pandas_type),
+                }
+            ),
+            preserve_index=False,
+        )
+    else:
+        table = pa.table(
+            {
+                "lpep_pickup_datetime": pickups,
+                "total_amount": pa.array([value, None], type=arrow_type),
+            }
+        )
+    path = tmp_path / "nullable-integer.parquet"
+    pq.write_table(table, path)
+    result = DailyRevenueCalculator(reporting_settings.reporting_period).calculate(
+        [path]
+    )
+    assert result.total_amount == Decimal(f"{value}.00")
+    assert result.counts["rows_read"] == 2
+    assert result.counts["rows_used"] == 1
+    assert result.counts["invalid_amount"] == 1
+
+
+@pytest.mark.parametrize("pandas_metadata", [False, True])
+def test_float32_subcent_decision_does_not_depend_on_pandas_metadata(
+    reporting_settings, tmp_path, pandas_metadata
+):
+    """A binary32 0.1 is not cent-exact; extension metadata must not hide it."""
+    pickups = [reporting_settings.reporting_period.start] * 2
+    if pandas_metadata:
+        table = pa.Table.from_pandas(
+            pd.DataFrame(
+                {
+                    "lpep_pickup_datetime": pickups,
+                    "total_amount": pd.array([0.1, None], dtype="Float32"),
+                }
+            ),
+            preserve_index=False,
+        )
+    else:
+        table = pa.table(
+            {
+                "lpep_pickup_datetime": pickups,
+                "total_amount": pa.array([0.1, None], type=pa.float32()),
+            }
+        )
+    path = tmp_path / "float32.parquet"
+    pq.write_table(table, path)
+    with pytest.raises(ValueError, match="Sub-cent"):
+        DailyRevenueCalculator(reporting_settings.reporting_period).calculate([path])
+
+
+@pytest.mark.parametrize(
+    "amounts, expected, invalid, negative, zero",
+    [
+        (pa.array([0.1, None], type=pa.float64()), Decimal("0.10"), 1, 0, 0),
+        (
+            pa.array([Decimal("0.00"), Decimal("-1.25"), None]),
+            Decimal("-1.25"),
+            1,
+            1,
+            1,
+        ),
+        (
+            pa.array([0.0, -1.25, float("nan"), float("inf"), -float("inf")]),
+            Decimal("-1.25"),
+            3,
+            1,
+            1,
+        ),
+    ],
+)
+def test_arrow_backed_read_preserves_existing_money_rules(
+    reporting_settings, tmp_path, amounts, expected, invalid, negative, zero
+):
+    """Keep float64 text semantics, decimal signs/zero and nonfinite accounting."""
+    path = tmp_path / "money-rules.parquet"
+    pq.write_table(
+        pa.table(
+            {
+                "lpep_pickup_datetime": [reporting_settings.reporting_period.start]
+                * len(amounts),
+                "total_amount": amounts,
+            }
+        ),
+        path,
+    )
+    result = DailyRevenueCalculator(reporting_settings.reporting_period).calculate(
+        [path]
+    )
+    assert result.total_amount == expected
+    assert result.counts["invalid_amount"] == invalid
+    assert result.counts["rows_used"] == len(amounts) - invalid
+    assert result.counts["negative_amount"] == negative
+    assert result.counts["zero_amount"] == zero
+
+
+def test_arrow_backed_boolean_amounts_are_still_invalid(reporting_settings, tmp_path):
+    """Never treat native nullable booleans as integer revenue."""
+    path = tmp_path / "booleans.parquet"
+    pq.write_table(
+        pa.table(
+            {
+                "lpep_pickup_datetime": [reporting_settings.reporting_period.start] * 3,
+                "total_amount": pa.array([True, False, None], type=pa.bool_()),
+            }
+        ),
+        path,
+    )
+    with pytest.raises(ValueError, match="No usable"):
         DailyRevenueCalculator(reporting_settings.reporting_period).calculate([path])
 
 
