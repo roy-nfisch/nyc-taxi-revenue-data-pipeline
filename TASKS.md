@@ -410,6 +410,12 @@ not completed work or permission to publish.
   do not edit the loader. Done when queries match ETL dates, exact-cent amounts,
   counts and exclusion order on shared fixtures, including invalid rows and
   sub-cent failure cases. Runtime result conversion is connected in T11.6.
+  **Draft for review:** packaged per-source classification, exact `BIGNUM`
+  daily totals and counters, with independent SQL/ETL query tests. SQL retains
+  exact nullable integers; real-Parquet tests document baseline pandas
+  dtype/metadata precision and validation gaps. A separate ETL fix is approved;
+  universal parity and task completion are not claimed. See
+  [SQL boundary and limitations](docs/elt-sql.md).
 
 - [ ] **T11.5 — Prepare Docker delivery.** Depends on merged T11.2; may run
   alongside T11.3 and T11.4. Add an explicit optional ELT build/run configuration,
