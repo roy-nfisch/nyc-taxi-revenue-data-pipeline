@@ -1,4 +1,4 @@
--- Metadata only: source tables and loading are implemented in the next task.
+-- Raw tables are created per checked source by TaxiWarehouse.load().
 CREATE SCHEMA IF NOT EXISTS raw;
 
 CREATE TABLE IF NOT EXISTS loaded_sources (
