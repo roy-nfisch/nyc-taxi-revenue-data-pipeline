@@ -209,17 +209,32 @@ This removes only this project's containers/network, preserving named volumes.
 Starting again keeps reports and run history. Do not add `--volumes` unless you
 deliberately want to delete them. Demo Radar and other projects are unaffected.
 The server has no authentication and is for local use only; do not expose its port
-publicly or mount the Docker socket. No cloud deployment or image publication.
+publicly or mount the Docker socket. These local commands do not deploy a public service.
 
 ## Publish to GHCR
 
-The manual release workflow is prepared; **no image has been published yet**.
+The first release, **2026.11.05**, is published and publicly downloadable.
 Publishing distributes the app, not the taxi data, and does not deploy Prefect.
 
-After the final-review changes are merged and the owner approves a release:
+| Release check | Verified result |
+|---|---|
+| Image | `ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline:2026.11.05` |
+| Digest | `sha256:1a83045ae680f6ed4f69e5c58bd930bc4e99e220577cdf8053cae332c6e317cb` |
+| Source commit | `f78262b77e8ea9b3a47024960de958781c9c5338` |
+| Platform / user | Linux amd64 / UID 10001 |
+| Anonymous access | Dated tag and `latest` pulled with empty Docker login configuration |
+| Fresh run | 146,475 accepted rides, 90 daily facts, USD 3,395,290.56 |
+
+The dated tag and `latest` matched during verification. Use the date tag or digest
+when you need a fixed release. [Publication run](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/actions/runs/42076273246).
+The fresh verification used disposable container storage; ordinary Compose runs
+reuse their named data/history volumes.
+
+For future owner-approved releases from reviewed `main`:
 
 1. In GitHub Actions, select **Publish pipeline image**, choose `main`, and enter
-   an unused date tag: `2026.11.05`, or `2026.11.05.1` for another release that day.
+   an unused date tag, such as `2026.11.05.1` for another release that day.
+   The existing `2026.11.05` release must not be overwritten.
 2. The workflow checks Python/package quality, builds the image, and runs the
    tests. Only the separate publishing job has `packages: write` permission.
    GitHub supplies `GITHUB_TOKEN`; no personal token needs to be created.
@@ -231,30 +246,43 @@ After the final-review changes are merged and the owner approves a release:
 
 The initial workflow targets **Linux amd64** on Ubuntu 26.04. Local Docker builds
 remain available for the host architecture. Multi-platform release is not claimed.
-If first-publication authorization fails, stop and review package permissions;
+If registry authorization fails, stop and review package permissions;
 never interpret 401/403 as permission to overwrite a tag. If verification fails
 after a dated tag was pushed, fix the cause and use a new suffix. Do not reuse it.
 
-After a release exists, set its real tag in a host terminal:
+The README's direct batch command stores reports in `nyc-taxi-release-data`,
+separate from Compose's volume. After running that command, inspect its report
+with a read-only mount:
 
 ```bash
-export TAXI_IMAGE=ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline:YYYY.MM.DD
+docker run --rm --platform linux/amd64 \
+  --mount type=volume,source=nyc-taxi-release-data,target=/data,readonly \
+  ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline:2026.11.05 \
+  python -c "from pathlib import Path; print(Path('/data/processed/metadata.json').read_text())"
+```
+
+To run the verified release with Compose, set its tag in a host terminal:
+
+```bash
+export TAXI_IMAGE=ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline:2026.11.05
+export DOCKER_DEFAULT_PLATFORM=linux/amd64
 docker pull "$TAXI_IMAGE"
 docker compose up -d --wait --no-build --pull always prefect
 docker compose run --rm --no-build --pull always flow
 ```
 
-Replace `YYYY.MM.DD`; the placeholder is not a published release. The same named
-data/history volumes are used, so this is not automatically a fresh-data run.
+The platform setting also allows Apple Silicon to run the published amd64 image
+under emulation. The same named data/history volumes are used, so this is not
+automatically a fresh-data run.
 The read-only JSON override still works with the published image. To return to
 local builds, run `unset TAXI_IMAGE` and remove or comment out any `TAXI_IMAGE`
 entry in `.env` before the normal build/start commands. Otherwise Compose will
 still use the value from `.env`.
+Also run `unset DOCKER_DEFAULT_PLATFORM` when returning to native local builds.
 
-The release run's summary records the digest and tags. Before calling the release
-complete, record the actual link here and verify a pull using empty Docker login
-configuration plus a fresh isolated project/volume. Never remove normal user volumes
-for that check. See [GHCR documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+For each future release, record its link and digest here, repeat the anonymous
+pull and fresh isolated run, and retain the workflow evidence. Never remove normal
+user volumes for that check. See [GHCR documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
 
 References: [Prefect retries](https://docs.prefect.io/v3/how-to-guides/workflows/retries),
 [Prefect result caching](https://docs.prefect.io/v3/concepts/caching),

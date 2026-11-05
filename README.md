@@ -1,6 +1,12 @@
 # NYC Taxi Revenue Data Pipeline
 
 [![CI on main](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/actions/workflows/ci.yml?query=branch%3Amain)
+[![Tests: unit, integration, data](https://img.shields.io/badge/tests-unit%20%7C%20integration%20%7C%20data-blue)](#run-the-checks)
+[![Python 3.13](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)](#run-locally)
+[![Processing: batch ETL](https://img.shields.io/badge/processing-batch%20ETL-blue)](#the-flow)
+[![Prefect: local orchestration](https://img.shields.io/badge/Prefect-local%20orchestration-blue)](#follow-a-run)
+[![Docker: local](https://img.shields.io/badge/Docker-local-2496ED?logo=docker&logoColor=white)](#run-with-docker-and-prefect)
+[![GHCR: public image](https://img.shields.io/badge/GHCR-public%20image-blue)](https://github.com/users/roy-nfisch/packages/container/package/nyc-taxi-revenue-data-pipeline)
 
 We built a small, object-oriented Python pipeline that turns NYC Green Taxi
 records into daily revenue reports. Our focus was reliable downloads, clear data
@@ -84,6 +90,22 @@ docker compose run --rm --no-deps pipeline python -c \
 The plain batch also runs in the image with
 `docker compose run --rm --no-deps pipeline`, without Prefect.
 Stop the server with `docker compose down`; reports and run history are retained.
+
+### Run the published image
+
+The [public GHCR image](https://github.com/users/roy-nfisch/packages/container/package/nyc-taxi-revenue-data-pipeline)
+is available as `2026.11.05` and `latest`. No registry login or local build is needed:
+
+```bash
+docker run --rm --platform linux/amd64 \
+  --mount type=volume,source=nyc-taxi-release-data,target=/data \
+  ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline:2026.11.05
+```
+
+This runs the batch, not a public service. Reports persist in the named volume.
+The image is Linux amd64; Apple Silicon uses emulation. Native local builds remain
+available. See the [verified release and Compose instructions](docs/docker-prefect.md#publish-to-ghcr)
+for the digest, result inspection and optional Prefect setup.
 
 ### Follow a run
 
