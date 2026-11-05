@@ -260,10 +260,10 @@ and dotenv contract checks passed in the final Docker CI job.
   work. Publishing distributes the image; it does not deploy the pipeline or
   expose Prefect publicly. This task does not block completion of T10.
 
-- [ ] **T10b — Add a small data exploration notebook.** In progress. Show the coach's
+- [x] **T10b — Add a small data exploration notebook.** Completed. Show the coach's
   exploration step in `notebooks/`, without moving pipeline logic out of `src/`:
-  - Read one existing staged Green Taxi file; do not download or modify raw data.
-    Explain how to stage the file first if it is missing.
+  - Explore existing staged Green Taxi files for the selected period. An optional
+    download cell reuses the existing downloader; analysis never modifies raw data.
   - Inspect pickup timestamps and `total_amount`: types, missing values, date
     and amount ranges, negative/zero amounts, and out-of-period pickups.
   - Explain how the observations support the approved cleaning rules. Link to
@@ -277,12 +277,15 @@ and dotenv contract checks passed in the final Docker CI job.
   disposable container with the checkout read-only. It found 48,326 rows, six
   pickups outside January–March, 153 negative and 33 zero amounts, matching the
   recorded inspection. Both selected columns had no missing values. Notebook
-  outputs and execution counts remain clear. Awaiting owner review in Jupyter.
+  outputs and execution counts are cleared for commit. The owner explored the
+  notebook in Jupyter and requested dynamic period selection and optional downloads.
   Exploration now follows the selected period end to end: source files, row
   counts, date checks and labels. Verified in-memory notebook runs for March
   alone (51,539 rows; 11 outside March) and January–March (146,486 rows; 11
-  outside that period). No saved outputs or test-suite execution; the March
-  selection remains in the notebook for the owner's exploration.
+  outside that period). Final review checked settings, file selection, date checks,
+  labels, and missing-file instructions. Saved outputs and environment metadata
+  were removed; the owner's March/four-month setting is preserved. No new notebook
+  execution or test-suite run was performed during this cleanup.
 
 - [ ] **Portfolio review — Revisit the website entry.** After T10b, T10, and
   T10a are complete, assess whether the finished project adds value to
