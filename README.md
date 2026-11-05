@@ -247,6 +247,7 @@ nyc-taxi-revenue-data-pipeline/
 ├── tests/
 │   ├── green_taxi/                 # Mirrors the Python package
 │   └── docker/                     # Image and Compose checks
+├── notebooks/                      # Optional data exploration
 ├── docs/                           # Design, data review and run guide
 │   └── assets/                     # Terminal GIF and Prefect screenshot
 ├── data/                           # Generated locally; ignored by Git
@@ -279,6 +280,7 @@ its named volume rather than the host `data/` directory.
 
 - [Design decisions](docs/adr/001-pipeline-design.md): scope, data rules and object responsibilities.
 - [Real-data review](docs/data-review.md): source identities, reconciliation and repeat-run evidence.
+- [Exploration notebook](notebooks/01-explore-green-taxi.ipynb): inspect one staged file without changing it.
 - [Docker and Prefect](docs/docker-prefect.md): configuration, storage and troubleshooting.
 - [Task list](TASKS.md): reviewed work and planned follow-ups.
 
