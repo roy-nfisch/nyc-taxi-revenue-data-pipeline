@@ -1,5 +1,6 @@
 """Connect checked staging, warehouse SQL and separate ELT report publication."""
 
+from importlib.metadata import version
 from pathlib import Path
 
 from green_taxi.download import TaxiDownloader
@@ -26,7 +27,10 @@ class ELTPipeline:
         """Capture run identity before staging, using the shared report contract."""
         return self.reporting.start_run(
             code_identity(Path(__file__).resolve().parents[3])
-        )
+        ) | {
+            "execution_mode": "elt",
+            "engine": {"name": "duckdb", "version": version("duckdb")},
+        }
 
     def load(self, inputs):
         """Load checked snapshots and close the connection before returning."""

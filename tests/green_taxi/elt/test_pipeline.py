@@ -27,11 +27,17 @@ def test_elt_matches_etl_and_rebuilds_separate_reports(elt_setup):
     etl, elt, session = elt_setup
     etl_marker = etl.run()
     original = etl_marker.read_bytes()
+    assert json.loads(original)["execution_mode"] == "etl"
+    assert json.loads(original)["engine"]["name"] == "pandas"
+    assert json.loads(original)["engine"]["version"]
     expected = pd.read_parquet(etl_marker.parent / "fact_daily_revenue.parquet")
     previous = None
     for _ in range(2):
         marker = elt.run()
         metadata = json.loads(marker.read_text())
+        assert metadata["execution_mode"] == "elt"
+        assert metadata["engine"]["name"] == "duckdb"
+        assert metadata["engine"]["version"]
         assert_frame_equal(
             expected, pd.read_parquet(marker.parent / "fact_daily_revenue.parquet")
         )

@@ -1,6 +1,7 @@
 """Connect staging, calculation, and report writing without copying their rules."""
 
 import logging
+from importlib.metadata import version
 from pathlib import Path
 
 from green_taxi.download import TaxiDownloader
@@ -65,7 +66,10 @@ class TaxiPipeline:
 
     def start_run(self) -> dict:
         """Start a run using the shared metadata contract."""
-        return self.reporting.start_run(code_identity())
+        return self.reporting.start_run(code_identity()) | {
+            "execution_mode": "etl",
+            "engine": {"name": "pandas", "version": version("pandas")},
+        }
 
     def save(self, inputs, result, context) -> Path:
         """Publish through the shared writer and lineage contract."""
