@@ -1,12 +1,16 @@
 """Check retry decisions and sequential delegation without starting a server."""
 
+from decimal import Decimal
+from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 import requests
 from click.testing import CliRunner
 
-from green_taxi.flow import main, retry_download, taxi_flow
+from green_taxi.flow import main, retry_download, save_report, taxi_flow
+from green_taxi.settings import ReportingPeriod
 
 pytestmark = pytest.mark.unit
 
@@ -93,3 +97,27 @@ def test_flow_cli_passes_config_storage_and_refresh(monkeypatch, tmp_path):
     )
     assert result.exit_code == 0, result.output
     run.assert_called_once_with(str(config), str(tmp_path), True)
+
+
+@pytest.mark.parametrize("fails", [False, True])
+def test_save_summary_is_logged_only_after_success(monkeypatch, fails):
+    """Show the period/totals from the real result only after the writer succeeds."""
+    pipeline = MagicMock()
+    pipeline.settings.reporting_period = ReportingPeriod(
+        start_month="2025-03", duration_months=3
+    )
+    pipeline.save.return_value = Path("metadata.json")
+    logger = MagicMock()
+    monkeypatch.setattr("green_taxi.flow.get_run_logger", lambda: logger)
+    result = SimpleNamespace(
+        counts={"rows_used": 2}, facts=[None], total_amount=Decimal("1.25")
+    )
+    if fails:
+        pipeline.save.side_effect = OSError("storage failure")
+        with pytest.raises(OSError):
+            save_report.fn(pipeline, (), result, {})
+        logger.info.assert_not_called()
+    else:
+        assert save_report.fn(pipeline, (), result, {}) == "metadata.json"
+        logger.info.assert_called_once()
+        assert logger.info.call_args.args[3:6] == (2, 1, Decimal("1.25"))

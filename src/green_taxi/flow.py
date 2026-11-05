@@ -5,7 +5,7 @@ from pathlib import Path
 
 import click
 import requests
-from prefect import flow, task
+from prefect import flow, get_run_logger, task
 
 from green_taxi.logging import configure_logging
 from green_taxi.pipeline import TaxiPipeline
@@ -72,8 +72,19 @@ def calculate_report(pipeline: TaxiPipeline, inputs: tuple):
     cache_policy=None,
 )
 def save_report(pipeline: TaxiPipeline, inputs: tuple, result, context: dict) -> str:
-    """Reuse shared lineage/publication code; return only the metadata path."""
-    return str(pipeline.save(inputs, result, context))
+    """Save using shared code; log verified totals in Prefect after publication."""
+    path = pipeline.save(inputs, result, context)
+    period = pipeline.settings.reporting_period
+    get_run_logger().info(
+        "Report %s to %s (end exclusive): %s accepted rides, %s days, USD %s; saved %s",
+        period.start,
+        period.end,
+        result.counts["rows_used"],
+        len(result.facts),
+        result.total_amount,
+        path,
+    )
+    return str(path)
 
 
 @flow(

@@ -62,6 +62,8 @@ def test_month_count_derives_exact_boundaries(month, duration, start, end):
     assert (period.start, period.end) == (start, end)
     assert period.contains(start)
     assert not period.contains(end)
+    assert len(period.months) == duration
+    assert period.months[0] == month
 
 
 @pytest.mark.parametrize("duration", [1, 10**30])

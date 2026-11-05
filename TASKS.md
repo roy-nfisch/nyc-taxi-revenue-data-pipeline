@@ -163,6 +163,12 @@ Additional requested follow-up: writable UI bundle directory and HTML-aware
 health check; opt-in Compose end-to-end check using private named volumes and
 the default user; optional image build provenance; ignored local config folder.
 New/updated tests for this follow-up have not been run pending explicit approval.
+Settings now derive source months from the reporting period when `months` is
+omitted. Defaults and the local example require one period edit; an explicit
+source list remains supported. Added year-rollover and invalid-duration cases;
+these new tests have not been run.
+The save task now logs the saved report's period, ride/day counts, and total in
+Prefect after successful publication, without repeating the calculation.
 Enforced single-writer locking, digest/signed provenance, and measured image-size
 optimization remain future hardening, not extra requirements for this local demo.
 

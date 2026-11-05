@@ -79,9 +79,11 @@ mkdir -p config/local
 cp src/green_taxi/defaults.json config/local/run.json
 ```
 
-Keep `duration_months` a positive integer, not a quoted string or float. `months`
-selects source files; `reporting_period` selects pickup dates. No values are
-duplicated in Compose. `TAXI_CONFIG_FILE` is already set in `.env`; change it there
+Keep `duration_months` a positive integer, not a quoted string or float. Set only
+`reporting_period.start_month` and `duration_months`: source filenames are derived
+automatically, including year changes. An explicit `months` list is optional for
+advanced source overrides; remove an old list to enable automatic selection.
+No period values are duplicated in Compose. `TAXI_CONFIG_FILE` is set in `.env`; change it there
 if you choose another JSON filename. Then opt into the override:
 
 ```bash
@@ -107,6 +109,12 @@ Compose still works even when `config/local/run.json` has not been created.
 Existing `.env` files pointing to `run.local.json` remain supported; move that
 file yourself and update `.env` when convenient. Renaming another JSON file in
 the repository does not automatically make it ignored; use the local directory.
+
+Editing JSON does not launch work. Run the flow command again after saving.
+`docker compose up ... prefect` starts the server/UI, not the batch, and does not
+create or overwrite host JSON files. After completion, open the **Save checked
+report** task's logs to see period, rides, days, and total. It is a log summary,
+not an interactive report table. The report-inspection command below shows metadata.
 
 ## Where things live
 

@@ -33,12 +33,13 @@ separate download, calculation, and save tasks. Avoid a generic
 repository/factory hierarchy; small helper functions are fine inside these responsibilities.
 Pydantic checks settings, not millions of individual ride objects; pandas checks the tables.
 
-Month selection lives in packaged `defaults.json`, not a Python Literal or
-duplicated default list. `PipelineSettings.from_file()` loads that file or a
-user-supplied JSON object and validates its contents. Direct construction must
-supply months explicitly. Calendar-format validation is reusable; the default
-selection and the agreed reporting period remain January–March 2025. A different
-source selection alone does not approve different reporting-period rules.
+The reporting period lives in packaged `defaults.json`, not a Python Literal.
+Validated settings derive the source-month names from this period, so changing
+the start/duration requires one edit. This applies to file loading and direct
+construction with an explicit period. A source `months` list remains an optional
+advanced override and is never silently replaced. Configuration must supply at
+least a period or a source selection; empty/invalid JSON still fails. The default
+selection and approved reporting period remain January–March 2025.
 The reporting range uses `start_month` plus a strictly positive integer
 `duration_months`. `ReportingPeriod` derives inclusive start and exclusive end
 with calendar-month arithmetic, not thirty-day increments. One means the whole
@@ -46,7 +47,7 @@ starting month; zero/negative numbers are errors, not modes. Strings, floats,
 booleans, null, invalid calendar months, extra fields, and year overflow fail
 validation. No current-date dependency or “until today” shortcut is implemented.
 This replaces two separately editable boundaries and keeps the approved default
-at January–March 2025. Source-file selection remains a separate setting.
+at January–March 2025. A source-file override does not change pickup-date inclusion.
 
 `ReportingPeriod` belongs beside `PipelineSettings`: it is a small settings value
 object, not a new service. The calculator receives only that period. Its

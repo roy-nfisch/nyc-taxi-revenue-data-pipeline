@@ -199,16 +199,16 @@ uv build
 ```
 
 The command reads [defaults.json](src/green_taxi/defaults.json), validates it, and
-prints the resulting settings. The default months are defined only in that file,
-not repeated in a Python Literal and default tuple. Month validation checks real
+prints the resulting settings. The default period is defined only in that file;
+the source months are generated from it. Month validation checks real
 `YYYY-MM` values and uniqueness. The default project still covers Jan–Mar 2025.
 
-To load your own JSON file, use `--config path/to/run.json`. It must contain
-`months`; it can also set `reporting_period`, `source_url`, `data_dir`,
+To load your own JSON file, use `--config path/to/run.json`. Normally it contains
+`reporting_period`, which also generates the source-month list. It can set `source_url`, `data_dir`,
 `timeout_seconds`, and `log_level`. This is a local file, not a web upload.
 Invalid/missing files fail instead of falling back.
-Changing source-month selection does not automatically change the agreed report
-date boundaries; that would require a separate data-rule decision.
+An optional explicit `months` list overrides source selection only. Use it only
+when deliberately reading different files, such as extra months for late records.
 
 ### Reporting months
 
@@ -218,7 +218,6 @@ not maintain a second editable end date.
 
 ```json
 {
-  "months": ["2025-01", "2025-02", "2025-03"],
   "reporting_period": {
     "start_month": "2025-01",
     "duration_months": 3
@@ -226,8 +225,9 @@ not maintain a second editable end date.
 }
 ```
 
-The example includes January, February, and March: 01.01.2025 up to, but not
-including, 01.04.2025.
+The example downloads January, February, and March and reports pickups from
+01.01.2025 up to, but not including, 01.04.2025. Edit the period once; you do not
+need to maintain a second month list. CLI settings inspection shows the derived list.
 
 | `duration_months` | Meaning |
 |---|---|
@@ -238,8 +238,9 @@ including, 01.04.2025.
 
 Invalid month formats, missing fields, extra boundary fields, and dates beyond
 the supported calendar also fail before processing starts. The range does not
-depend on today's date. Download months and reporting months remain separate:
-the pickup date, not the filename, determines whether a ride belongs in the report.
+depend on today's date. Source filenames normally follow the period, but the
+pickup date still determines whether a ride belongs in the report. This does not
+guarantee that the selected files contain every ride recorded elsewhere.
 
 Click translates terminal options into arguments to our Python function. It does
 not run GitHub Actions or orchestrate tasks. Python/Prefect callers can bypass it:
