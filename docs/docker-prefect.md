@@ -6,14 +6,36 @@ reuse `TaxiPipeline.from_settings()` and the same downloader/calculator/writer.
 
 ## Start and run
 
-From the repository root, check port 4205 is free, then:
+Run all commands in this guide in your **Mac/host terminal**, from the repository
+root, not inside a container. Set up Compose settings once:
+
+```bash
+cp .env.example .env
+```
+
+If `.env` already exists, edit it instead of overwriting it. Compose automatically
+reads this local file; Python does not load it. It contains only:
+
+```dotenv
+PREFECT_PORT=4205
+TAXI_CONFIG_FILE=./run.local.json
+```
+
+`.env` chooses the host UI port and the optional JSON file to mount. Pipeline
+settings (months, reporting period, timeouts, and paths) stay in JSON, not `.env`.
+These values are used by Compose interpolation, not automatically forwarded to
+container environment variables. `.env` is excluded from Git and image builds;
+only `.env.example` is committed. No new Python dependency is needed.
+
+Check your chosen port is free, then:
 
 ```bash
 docker compose up --build -d --wait prefect
 docker compose run --rm flow
 ```
 
-Open **http://127.0.0.1:4205**. Under Runs, select `green-taxi-batch` to see:
+Open **http://127.0.0.1:4205** (or your chosen port). Under Runs, select
+`green-taxi-batch` to see:
 
 1. Download taxi files.
 2. Calculate daily revenue.
@@ -35,12 +57,50 @@ The normal Python command also works in the same image, without Prefect:
 docker compose run --rm --no-deps pipeline
 ```
 
-To use another host port, set it when starting the server and flow:
+To use another host port, edit `.env`, for example:
+
+```dotenv
+PREFECT_PORT=4206
+```
+
+Then run the same Compose startup/flow commands above. An exported shell variable
+with the same name takes precedence over `.env`; unset it if an edit seems ignored.
+
+## Custom JSON configuration (optional)
+
+Normal Compose runs use the packaged `defaults.json`; no host config file is
+required. For another start month, duration, or source selection, copy the defaults
+and edit the JSON. `run.local.json` is excluded from Git and the Docker build context:
 
 ```bash
-PREFECT_PORT=4206 docker compose up -d --wait prefect
-PREFECT_PORT=4206 docker compose run --rm flow
+cp src/green_taxi/defaults.json run.local.json
 ```
+
+Keep `duration_months` a positive integer, not a quoted string or float. `months`
+selects source files; `reporting_period` selects pickup dates. No values are
+duplicated in Compose. `TAXI_CONFIG_FILE` is already set in `.env`; change it there
+if you choose another JSON filename. Then opt into the override:
+
+```bash
+docker compose -f compose.yaml -f compose.config.yaml run --rm flow
+```
+
+For the plain batch without Prefect:
+
+```bash
+docker compose -f compose.yaml -f compose.config.yaml run --rm --no-deps pipeline
+```
+
+Start the server with the normal command above before running a flow. Only the
+batch services mount the file, at `/run-config/run.json`, read-only. Missing
+paths fail instead of becoming empty directories. The non-root container user
+must be able to read the file; use trusted JSON, never secrets. `--data-dir /data`
+still overrides any JSON storage path so reports use the existing named volume.
+Custom runs replace the current report in that volume; they are not a separate
+report archive. Run only one batch at a time. To return to packaged defaults,
+omit `-f compose.config.yaml` again; no image rebuild or Python change is needed.
+Setting `TAXI_CONFIG_FILE` in `.env` alone does not enable a custom mount, so base
+Compose still works even when `run.local.json` has not been created.
 
 ## Where things live
 
@@ -108,4 +168,5 @@ The server has no authentication and is for local use only; do not expose its po
 publicly or mount the Docker socket. No cloud deployment or image publication.
 
 References: [Prefect retries](https://docs.prefect.io/v3/how-to-guides/workflows/retries),
-[Prefect result caching](https://docs.prefect.io/v3/concepts/caching).
+[Prefect result caching](https://docs.prefect.io/v3/concepts/caching),
+[Compose .env interpolation](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/).

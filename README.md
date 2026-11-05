@@ -148,17 +148,23 @@ execution from the start, not add a separate container-only implementation.
 ## Repository map
 
 ```text
-src/green_taxi/       Pipeline objects, configuration, and commands
-tests/               Mirrored tests and shared fixtures
-docs/                Design decisions, data review, and demo media
+src/green_taxi/       Shared pipeline objects, JSON defaults, CLI, and Prefect flow
+tests/green_taxi/     Mirrored unit/integration tests and shared fixtures
+tests/docker/        Opt-in image and Compose contract checks
+docs/                Design decisions, data review, Docker/Prefect guide, and demo
+data/                Local raw files, reports, and original demo media — ignored
 Dockerfile           Non-root image for the batch and local Prefect server
 compose.yaml         Project network, persistent volumes, and manual run services
+compose.config.yaml  Optional read-only custom JSON mount for batch services
+.env.example         Template for local Compose settings; copy to ignored .env
+.dockerignore        Files excluded from the image build context
 .github/workflows/   Automated checks
 solution/            Supplied reference; remove before public release
 README.md            Project overview and run instructions
 TASKS.md             Progress and completion checks
 pyproject.toml       Package, dependencies, and tool configuration
 uv.lock              Locked dependency versions
+LICENSE              Project license and attribution
 ```
 
 `TaxiPipeline` connects the downloader, calculator, and `ReportWriter`; each keeps
@@ -279,7 +285,11 @@ not evidence of a substantial speedup. These are local measurements, not CI prom
 
 ### Docker and Prefect
 
+From your Mac/host terminal at the repository root (edit an existing `.env`
+instead of overwriting it):
+
 ```bash
+cp .env.example .env
 docker compose up --build -d --wait prefect
 docker compose run --rm flow
 ```
@@ -290,6 +300,11 @@ in named volumes, separate from host `./data`. Plain Python also runs in the ima
 
 See [Docker and Prefect](docs/docker-prefect.md) for ports, retries, storage,
 inspection, tests, and safe stop/restart commands.
+Packaged JSON defaults remain available; use the documented
+[optional config override](docs/docker-prefect.md#custom-json-configuration-optional)
+to mount your own JSON read-only without rebuilding the image.
+Compose settings belong in `.env`; pipeline settings stay in JSON. No Python
+dotenv loader is used. The `.env` template does not enable custom JSON by itself.
 
 ### Download the raw files
 

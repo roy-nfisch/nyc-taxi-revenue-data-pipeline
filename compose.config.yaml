@@ -1,0 +1,18 @@
+# Opt-in: set TAXI_CONFIG_FILE in .env, then use -f compose.yaml -f compose.config.yaml.
+x-config-file: &config-file
+  type: bind
+  source: ${TAXI_CONFIG_FILE:?Set TAXI_CONFIG_FILE in .env to an existing JSON file}
+  target: /run-config/run.json
+  read_only: true
+  bind:
+    create_host_path: false
+
+services:
+  pipeline:
+    command: [python, -m, green_taxi, --run, --config, /run-config/run.json, --data-dir, /data]
+    volumes:
+      - *config-file
+  flow:
+    command: [python, -m, green_taxi.flow, --config, /run-config/run.json, --data-dir, /data]
+    volumes:
+      - *config-file

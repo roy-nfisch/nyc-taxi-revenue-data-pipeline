@@ -121,6 +121,7 @@ celerybeat.pid
 # Environments
 .env
 .env.*
+/run.local.json
 !.env.example
 .venv
 .uv/

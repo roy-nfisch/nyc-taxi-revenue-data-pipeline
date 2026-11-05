@@ -2,7 +2,9 @@
 
 import json
 import os
+import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -73,4 +75,134 @@ def test_services_do_not_request_privilege_or_host_access(services):
         assert set(service["networks"]) == {"taxi-network"}
     assert (
         services["pipeline"]["profiles"] == services["flow"]["profiles"] == ["manual"]
+    )
+
+
+@pytest.mark.parametrize("service", ["pipeline", "flow"])
+def test_custom_config_is_readonly_without_replacing_data_volume(tmp_path, service):
+    """The override only adds a file mount; both entry points keep persistent data."""
+    config = tmp_path / "run with spaces.json"
+    config.write_text('{"months": ["2032-02"]}')
+    result = subprocess.run(
+        [
+            "docker",
+            "compose",
+            "-f",
+            "compose.yaml",
+            "-f",
+            "compose.config.yaml",
+            "--profile",
+            "manual",
+            "config",
+            "--format",
+            "json",
+        ],
+        env=os.environ | {"TAXI_CONFIG_FILE": str(config)},
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    rendered = json.loads(result.stdout)["services"]
+    mounts = {mount["target"]: mount for mount in rendered[service]["volumes"]}
+    assert mounts["/data"]["source"] == "taxi-data"
+    mounted_config = mounts["/run-config/run.json"]
+    assert mounted_config["source"] == str(config)
+    assert mounted_config["read_only"] is True
+    assert mounted_config.get("bind", {}).get("create_host_path", False) is False
+    assert "--config" in rendered[service]["command"]
+    assert "/run-config/run.json" in rendered[service]["command"]
+    assert len(rendered["prefect"]["volumes"]) == 1
+
+
+def test_custom_override_requires_explicit_file():
+    """An unset/empty custom path fails instead of mounting a guessed directory."""
+    result = subprocess.run(
+        [
+            "docker",
+            "compose",
+            "-f",
+            "compose.yaml",
+            "-f",
+            "compose.config.yaml",
+            "config",
+        ],
+        env=os.environ | {"TAXI_CONFIG_FILE": ""},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode != 0
+    assert "TAXI_CONFIG_FILE" in result.stderr
+
+
+@pytest.fixture
+def dotenv_project(tmp_path):
+    """Copy Compose/template files into isolation; never overwrite the user's .env."""
+    root = Path(__file__).resolve().parents[2]
+    for name in ("compose.yaml", "compose.config.yaml"):
+        shutil.copyfile(root / name, tmp_path / name)
+    template = (root / ".env.example").read_text()
+    (tmp_path / ".env").write_text(
+        template.replace("PREFECT_PORT=4205", "PREFECT_PORT=4217")
+    )
+    (tmp_path / "run.local.json").write_text("{}")
+    excluded = {
+        "PREFECT_PORT",
+        "TAXI_CONFIG_FILE",
+        "COMPOSE_ENV_FILES",
+        "COMPOSE_DISABLE_ENV_FILE",
+        "COMPOSE_FILE",
+    }
+    env = {key: value for key, value in os.environ.items() if key not in excluded}
+    return tmp_path, env
+
+
+@pytest.mark.parametrize("custom", [False, True])
+def test_dotenv_is_loaded_without_exporting_compose_settings(dotenv_project, custom):
+    """Compose reads .env on the host; only the optional override mounts the JSON."""
+    folder, env = dotenv_project
+    command = ["docker", "compose", "-f", "compose.yaml"]
+    if custom:
+        command += ["-f", "compose.config.yaml"]
+    result = subprocess.run(
+        command + ["--profile", "manual", "config", "--format", "json"],
+        cwd=folder,
+        env=env,
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    services = json.loads(result.stdout)["services"]
+    assert services["prefect"]["ports"][0]["published"] == "4217"
+    assert services["flow"]["environment"]["PREFECT_UI_URL"] == "http://127.0.0.1:4217"
+    for name in ("pipeline", "flow"):
+        assert "TAXI_CONFIG_FILE" not in (services[name].get("environment") or {})
+        mounts = {mount["target"]: mount for mount in services[name]["volumes"]}
+        if custom:
+            assert mounts["/run-config/run.json"]["source"] == str(
+                folder / "run.local.json"
+            )
+            assert mounts["/run-config/run.json"]["read_only"] is True
+        else:
+            assert "/run-config/run.json" not in mounts
+            assert "--config" not in (services[name].get("command") or [])
+
+
+def test_shell_setting_overrides_dotenv(dotenv_project):
+    """An explicit shell port wins, matching the precedence explained in the guide."""
+    folder, env = dotenv_project
+    result = subprocess.run(
+        ["docker", "compose", "config", "--format", "json"],
+        cwd=folder,
+        env=env | {"PREFECT_PORT": "4218"},
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert (
+        json.loads(result.stdout)["services"]["prefect"]["ports"][0]["published"]
+        == "4218"
     )

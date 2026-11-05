@@ -136,13 +136,20 @@ Work order: **T08 and T09 → T07 → T10**. Task numbers stay unchanged.
   container flow and plain-container command both processed the agreed period.
   CI adds an Ubuntu 24.04 Docker job with tiny synthetic inputs; native Python
   jobs retain slim runners. See [run instructions](docs/docker-prefect.md).
+  An optional Compose override mounts a trusted custom JSON file read-only for
+  both run modes. Base Compose keeps packaged defaults; missing config paths fail
+  without creating directories. Tests verify the mount rejects writes and a
+  custom reporting month is used by a real container run.
+  Compose-only settings use a committed `.env.example` and ignored host `.env`.
+  Pipeline values stay in JSON; Python has no dotenv loader. Tests cover automatic
+  `.env` loading, shell precedence, and packaged defaults without the override.
 
 T08 and T09 can be developed together now that the local pipeline is verified.
 Both must pass before we resume T07 so its documentation covers the actual
 Docker and Prefect commands, not a planned setup.
 
-Local verification: 215 native application tests passed (five opt-in Docker tests
-skipped there), all five Docker smoke/contract tests passed when enabled, and three reference
+Local verification: 215 native application tests passed (13 opt-in Docker tests
+skipped there), all 13 Docker smoke/contract tests passed when enabled, and three reference
 tests, lint/format, package/image builds, and Compose configuration passed. Real
 container facts/calendar matched the reviewed host tables; a rebuild reused
 inputs and preserved 146,475 rides / $3,395,290.56. Down/up preserved run history
