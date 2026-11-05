@@ -418,6 +418,20 @@ not completed work or permission to publish.
   implement pipeline stages. Done when the optional dependency/resources work
   from an installed package/container and default ETL remains usable without
   DuckDB. Full ELT execution is verified in T11.6, not claimed here.
+  In progress: explicit `INSTALL_ELT=true` build support and a separate manual
+  `compose.elt.yaml` preparation service install DuckDB and packaged registry SQL.
+  The default image stays ETL-only; no ports, Prefect dependency or ELT pipeline
+  command are added. Delivery CI builds both variants and checks Compose isolation,
+  non-root in-memory SQL execution and DuckDB's absence from the default image.
+  The release workflow builds the optional variant only for verification and
+  still archives/publishes the default ETL image alone. The
+  [preparation guide](docs/elt-docker.md) distinguishes these checks from future
+  T11.6 execution and T11.7 publication.
+  Local verification: both image builds passed; 17 isolated Docker checks passed
+  without starting Prefect or downloading public data. The optional Python
+  installation passed 277 tests; Ruff lint/format and the package build passed.
+  The existing full Compose server/flow check remains for CI, not claimed as
+  locally verified. Review and owner approval are pending before completion.
 
 - [ ] **T11.6 — Connect and verify.** Depends on merged T11.3, T11.4 and T11.5.
   Connect the ELT coordinator, manual entry point, Prefect stages and conversion
