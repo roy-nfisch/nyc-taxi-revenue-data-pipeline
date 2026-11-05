@@ -73,6 +73,53 @@ Two different source filenames with the same bytes must both contribute.
 
 ## Object boundary for the next tasks
 
+### Per-source SQL boundary
+
+Classify one source table at a time, before combining results across files. The
+loader owns native raw tables and the original Arrow schema; it does not clean
+rows. The query coordinator derives the following type labels from that schema:
+
+- `pickup_kind`: `date`, `timestamp_naive`, `timestamp_aware`, `text`, `numeric`,
+  `boolean` or `null`.
+- `amount_kind`: `numeric`, `text`, `boolean` or `null`.
+
+Unsupported required-column types must be reported explicitly; do not guess a
+label. These labels describe source types, not whether individual rows are valid.
+Text still requires per-row parsing using the existing ETL date/money rules.
+
+`classify.sql` reads one validated, quoted `raw.source_YYYY_MM` identifier and
+binds `$period_start`, `$period_end`, `$pickup_kind` and `$amount_kind`. It returns
+one row for every input row, including duplicates, with this common shape:
+
+| Column | Type | Meaning |
+|---|---|---|
+| `service_date` | Nullable `DATE` | Recorded day; null for an invalid pickup. No timezone shift. |
+| `status` | `VARCHAR` | Exactly one of `accepted`, `invalid_pickup`, `outside_period`, `invalid_amount`, `sub_cent`. |
+| `amount_cents` | Nullable `BIGNUM` | Exact signed integer cents for accepted rows; null otherwise. Never a float or rounded decimal. |
+
+Check pickup, period, then amount, in that order. An in-period finite sub-cent
+amount produces `sub_cent`: any such result fails the run before publication;
+it is not another excluded-row count. An out-of-period amount is never evaluated
+as money. Accepted zero and negative amounts retain their signs.
+
+DuckDB 2.0.0 supports signed `BIGNUM` sums. Use that representation instead of
+imposing a new fixed-width money limit. Its Python result may be a decimal string;
+the final adapter converts exact integer cents, not float currency values.
+
+`daily_revenue.sql` groups accepted classifications into `service_date`,
+`trip_count` and `revenue_cents`. `counts.sql` produces the existing `COUNT_FIELDS`
+and a separate sub-cent failure count. Combine per-source daily totals/counters
+inside DuckDB using the common classified shape; never union differently typed
+raw columns or aggregate ride values in Python. T11.6 converts the checked results
+into `RevenueResult` and reuses the existing calendar helper.
+
+T11.4 fixtures must exercise the same boundary independently of the loader:
+ordinary numeric rides, a separate boolean-amount source, a timezone-aware source,
+and invalid/out-of-period text rows. Compare all outputs and failure outcomes with
+ETL. This describes the query interface, not implemented transformation SQL.
+
+### Warehouse operations
+
 These are proposed method contracts for review, not placeholder Python methods:
 
 | Proposed operation | Inputs | Result and failure behaviour |
@@ -110,6 +157,9 @@ Import checks follow the same separation: shared modules in
 `tests/green_taxi/etl/test_entry_points.py`, and the optional package in
 `tests/green_taxi/elt/test_package_import.py`. They reuse one passive-import
 fixture; the ELT package check also runs without DuckDB installed.
+`tests/packaging/test_installed_package.py` builds and installs a wheel outside the
+checkout, checks its SQL resource and runs tiny ETL with optional-engine imports
+blocked. Integration CI runs these checks; Docker verification remains separate.
 
 For reference: [DuckDB Python installation](https://duckdb.org/docs/stable/clients/python/overview)
 and [timestamp types](https://duckdb.org/docs/stable/sql/data_types/timestamp).

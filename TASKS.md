@@ -385,13 +385,17 @@ not completed work or permission to publish.
   identity constraints and imports without the engine. Integration CI installs
   the extra; unit and Docker jobs retain default dependencies. No loader, SQL
   business rules, coordinator, database file or Docker configuration is added.
-  Local verification: 265 tests passed without the extra (25 skipped), and 275
+  Local verification after review fixes: 266 tests passed without the extra
+  (26 skipped), and 277
   passed with it (15 Docker checks skipped). Ruff lint/format, lock consistency
-  and package build passed. An installed-wheel check outside the checkout read
-  and executed the packaged DDL in memory and confirmed optional-engine metadata.
+  and package build passed. Installed-wheel regression tests now build and install
+  the package outside the checkout, execute its registry DDL in memory, and run
+  tiny ETL with engine imports and network access blocked.
   Import checks are separated into shared, ETL and ELT tests, reusing one passive-
   import fixture. The default-installation run confirms DuckDB is absent.
-  Owner review and branch CI remain pending before this task is marked done.
+  Review fixes define per-source SQL type labels and classified result columns
+  before parallel work. Initial PR #13 CI passed all jobs; the review-fix commit
+  needs a fresh CI run. Owner approval remains pending before marking this done.
 
 - [ ] **T11.3 — Build raw loading.** Depends on merged T11.2. Implement the small
   warehouse object, source registry and transactional source replacement. Preserve

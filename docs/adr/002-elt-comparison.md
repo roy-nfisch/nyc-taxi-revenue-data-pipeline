@@ -233,11 +233,15 @@ Acceptance is equivalent checked output and safe reruns, not just a successful
 SQL query. The original reviewed files give 146,475 accepted rides, 90 daily
 facts and USD 3,395,290.56; changed files require fresh reconciliation.
 
-## Decisions for this PR
+## Design decisions
 
-- [ ] Approve DuckDB rather than PostgreSQL for the first comparison.
-- [ ] Approve plain SQL rather than adding dbt now.
-- [ ] Approve a separate optional ELT path while retaining ETL as the default.
+The design was reviewed and merged in PR #11:
 
-The first delivery step only reorganises ETL/shared code and tests. Database
-dependencies, SQL transformations, ELT images and data storage remain later tasks.
+- DuckDB rather than PostgreSQL for the first comparison.
+- Plain SQL rather than adding dbt initially.
+- A separate optional ELT path while retaining ETL as the default.
+
+The ETL folder move is merged. The current foundation adds the optional dependency,
+registry DDL and contracts only. Loading, SQL business transformations, ELT images
+and persistent data storage remain later tasks. The per-source query boundary is
+specified in the foundation contract before the parallel tasks start.

@@ -287,6 +287,7 @@ nyc-taxi-revenue-data-pipeline/
 │   ├── green_taxi/                 # Shared component tests and fixtures
 │   │   ├── etl/                    # Mirrors the Python ETL modules
 │   │   └── elt/                    # Optional registry contract checks
+│   ├── packaging/                  # Installed wheel, SQL resource and ETL smoke checks
 │   └── docker/                     # Image and Compose checks
 ├── notebooks/                      # Optional data exploration
 ├── docs/                           # Design, data review and run guide
