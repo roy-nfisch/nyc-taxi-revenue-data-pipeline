@@ -256,6 +256,7 @@ nyc-taxi-revenue-data-pipeline/
 │   ├── raw/                        # Staged source files
 │   └── processed/                  # Daily facts, date dimension and metadata
 ├── .github/workflows/              # Automated checks
+├── .github/scripts/                # Release-tag safety check
 ├── Dockerfile, compose.yaml        # Application and local Prefect runtime
 ├── compose.config.yaml             # Read-only host JSON override
 ├── .env.example                    # Optional Compose settings
@@ -283,6 +284,7 @@ its named volume rather than the host `data/` directory.
 - [Real-data review](docs/data-review.md): source identities, reconciliation and repeat-run evidence.
 - [Exploration notebook](notebooks/01-explore-green-taxi.ipynb): inspect one staged file without changing it.
 - [Docker and Prefect](docs/docker-prefect.md): configuration, storage and troubleshooting.
+- [Image publishing](docs/docker-prefect.md#publish-to-ghcr): manual release steps and approval gates.
 - [Task list](TASKS.md): reviewed work and planned follow-ups.
 
 The project uses [NYC TLC Green Taxi records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).

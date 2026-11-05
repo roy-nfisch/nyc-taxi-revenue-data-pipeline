@@ -21,8 +21,8 @@ jobs:
           version: "0.13.5"
       - run: uv python install
       - run: uv sync --locked
-      - run: uv run --locked ruff check src tests
-      - run: uv run --locked ruff format --check src tests
+      - run: uv run --locked ruff check src tests .github/scripts
+      - run: uv run --locked ruff format --check src tests .github/scripts
       - run: uv build
 
   tests:
