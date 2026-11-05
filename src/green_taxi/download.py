@@ -23,7 +23,11 @@ logger = logging.getLogger("green_taxi.download")
 
 @dataclass(frozen=True)
 class StagedFile:
-    """Identify one staged input for later run metadata; downloaded marks reuse."""
+    """Identify staged bytes and the configured URL; downloaded marks a fetch.
+
+    A reused file's historical origin is not verified. Publication records its
+    configured endpoint separately rather than claiming a download occurred.
+    """
 
     month: str
     path: Path

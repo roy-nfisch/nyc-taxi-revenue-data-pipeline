@@ -121,7 +121,8 @@ class TaxiPipeline:
                 {
                     "filename": item.path.name,
                     "month": item.month,
-                    "source_url": item.source_url,
+                    "source_url": item.source_url if item.downloaded else None,
+                    "configured_source_url": item.source_url,
                     "size_bytes": item.size_bytes,
                     "sha256": item.sha256,
                     "downloaded": item.downloaded,

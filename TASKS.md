@@ -135,7 +135,7 @@ T08 and T09 were reviewed and merged in
   Delivered: non-root image, loopback UI on checked port 4205,
   explicit project network, and separate persistent data/history volumes. Real
   container flow and plain-container command both processed the agreed period.
-  CI adds an Ubuntu 24.04 Docker job with tiny synthetic inputs; native Python
+  CI uses an Ubuntu 26.04 Docker job with tiny synthetic inputs; native Python
   jobs retain slim runners. See [run instructions](docs/docker-prefect.md).
   An optional Compose override mounts a trusted custom JSON file read-only for
   both run modes. Base Compose keeps packaged defaults; missing config paths fail
@@ -219,7 +219,7 @@ and dotenv contract checks passed in the final Docker CI job.
 
 ## Final review and public release
 
-- [ ] **T10 — Audit and prepare the project for public release.** After the
+- [ ] **T10 — Audit and prepare the project for public release.** In progress. After the
   working pipeline, Docker, and Prefect are verified:
   - Audit code, data rules, security, tests, and documentation. Keep OOD simple;
     fix confirmed findings and rerun the checks. Include an independent review
@@ -235,10 +235,30 @@ and dotenv contract checks passed in the final Docker CI job.
     access. This does not authorize public service hosting or image publication.
   Done when findings are resolved or clearly documented, the renamed public
   repository works for a new visitor.
+  Static audit completed with GPT-6 Astra. Fixed cached-input source attribution
+  and added a changed-source reuse/refresh regression. Removed the course reference
+  from the working tree and its CI/type-checker dependencies, retaining MIT notice
+  and historical evidence. Targeted tracked-history checks found no matching private
+  key/GitHub-token/AWS-key patterns; this is not a full secret or dependency audit.
+  Visibility changes and anonymous repository verification remain pending approval
+  after the final checks and review. No public-service hosting is planned.
+  Final local verification on 05.11.2026: all 274 application, workflow-helper,
+  and opt-in Docker checks passed together with two workers. Ruff lint/format,
+  offline lockfile consistency, package/image builds, and actionlint validation
+  passed. A fresh wheel install outside the checkout downloaded the agreed files
+  and reproduced 146,475 accepted rides, 90 days and USD 3,395,290.56 on a rebuild.
+  pip-audit found no known vulnerabilities in installed dependencies; it cannot
+  audit this unpublished local package. No registry/image-OS vulnerability scan
+  or full secret-scanner clearance is claimed. New branch CI has not run yet.
+  Owner selected `ubuntu-26.04` for Docker CI and both publishing jobs; Python-only
+  jobs retain `ubuntu-slim`. GitHub's official runner list confirms the hosted
+  label. The local actionlint image has an older label table, so only that unknown-
+  label warning is excluded during syntax validation; GitHub runtime is unverified.
 
 - [ ] **T10a — Publish the reviewed Docker image to GHCR.** After T10 is complete
-  and its changes are merged, follow the King County release approach in a
-  separate PR:
+  and its changes are merged, follow the King County release approach. At the
+  owner's request the workflow is prepared alongside T10 for one final review;
+  execution and public package verification still happen after merge:
   - Add a manual GitHub Actions publishing workflow that builds from `main`
     only after the required checks pass. Use `GITHUB_TOKEN` with the minimum
     permissions needed; do not require a personal token.
@@ -259,6 +279,14 @@ and dotenv contract checks passed in the final Docker CI job.
   anonymous pull and a fresh pipeline run succeed, and the README instructions
   work. Publishing distributes the image; it does not deploy the pipeline or
   expose Prefect publicly. This task does not block completion of T10.
+  Prepared for review alongside T10: manual main-only workflow, minimum publishing
+  permission, exact tested-image transfer, date/commit tags, fail-closed version
+  guard, pulled-image checks and `latest` promotion. Independent audit added
+  OCI-index/manifest-list handling to prevent replacing an existing multi-platform
+  tag. Registry guard regressions use mocked responses, not real publication.
+  No image or package visibility was changed. First GHCR authorization, Linux-amd64
+  execution on GitHub, public package access and anonymous pull remain unverified
+  until an approved release. The first publication must wait until T10 is merged.
 
 - [x] **T10b — Add a small data exploration notebook.** Completed. Show the coach's
   exploration step in `notebooks/`, without moving pipeline logic out of `src/`:
@@ -325,7 +353,8 @@ and dotenv contract checks passed in the final Docker CI job.
   Add tests with the behaviour they cover, without duplicating coverage.
 - Review each task for correctness, security, and simple OOD. For major milestones,
   request an independent audit with a different model and record actual findings.
-- Keep the supplied `solution/` unchanged. Keep raw/generated data out of Git;
+- The supplied reference was removed for release; preserve its MIT notice and
+  historical review evidence. Keep raw/generated data out of Git;
   if we use notebooks, clear outputs, execution counts, and unnecessary metadata.
 - Do not implement until the proposed plan is reviewed. Commit, push, and open
   PRs only when requested. Keep Docker and Prefect within scope; further extensions

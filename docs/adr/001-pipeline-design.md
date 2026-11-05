@@ -80,7 +80,6 @@ compose*.yaml            Local Prefect services and optional read-only config mo
 Dockerfile               Non-root packaged application
 data/raw/                Original downloaded files — ignored
 data/processed/          Generated fact/date tables and run counts — ignored
-solution/                Supplied reference; remove before public release
 ```
 
 ## Accepted data rules
@@ -170,9 +169,16 @@ guarantee that the source covers every journey. Synthetic failure tests remain n
 - Mark tests as unit or integration, with an optional data label. Reuse synthetic
   input fixtures and run isolated integration files with two workers; keep unit
   tests serial within their separate CI job. Test parallelism is not parallel writing
-  into the same production data directory. Keep the supplied reference unchanged.
+  into the same production data directory. The supplied reference was removed
+  from the release source tree after development; its MIT notice is retained.
 
 ## Run history and rebuilds
+
+For a downloaded input, metadata records its requested source URL. A reused
+file has no persisted proof of origin: `source_url` is null, while
+`configured_source_url` records the current requested endpoint. File checksums
+and sizes still identify actual bytes. Use an explicit refresh when changing
+source and requiring a verified fetch from the new endpoint.
 
 **Lineage means knowing where a result came from.** Save a small JSON metadata
 file with each successful run's outputs:

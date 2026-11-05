@@ -52,6 +52,27 @@ def test_lineage_matches_actual_staged_inputs(pipeline_setup):
     assert metadata["counts"]["rows_used"] == len(pipeline.settings.months)
 
 
+@pytest.mark.parametrize("force", [False, True])
+def test_changed_source_does_not_relabel_cached_origin(pipeline_setup, force):
+    """Cached bytes have unknown origin; only a real fetch verifies the new URL."""
+    from green_taxi.settings import PipelineSettings
+
+    pipeline, session = pipeline_setup
+    pipeline.run()
+    session.get.reset_mock()
+    settings = PipelineSettings.model_validate(
+        pipeline.settings.model_dump() | {"source_url": "https://example.org/taxi/"}
+    )
+    pipeline.settings = settings
+    pipeline.downloader.settings = settings
+    metadata = json.loads(pipeline.run(force=force).read_text())
+    assert session.get.call_count == (len(settings.months) if force else 0)
+    for item in metadata["inputs"]:
+        configured = f"https://example.org/taxi/{item['filename']}"
+        assert item["configured_source_url"] == configured
+        assert item["source_url"] == (configured if force else None)
+
+
 def test_cli_runs_existing_stages_and_force_refresh(pipeline_setup, monkeypatch):
     """CLI uses real reused inputs; force explicitly refreshes the downloader."""
     pipeline, session = pipeline_setup
