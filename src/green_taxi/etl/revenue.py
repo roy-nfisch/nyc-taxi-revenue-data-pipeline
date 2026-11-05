@@ -61,6 +61,7 @@ class DailyRevenueCalculator:
         every row is counted once. A file's name never assigns its revenue day.
         A file with no usable rows may contribute exclusions; a batch with none
         fails. Other I/O or Parquet errors propagate. No partial report is returned.
+        Arrow-backed reads preserve nullable numeric types before money validation.
         """
         paths = tuple(Path(path).resolve() for path in input_paths)
         if not paths or len(paths) != len(set(paths)):
@@ -68,7 +69,7 @@ class DailyRevenueCalculator:
         daily = {}
         counts = Counter(dict.fromkeys(COUNT_FIELDS, 0))
         for path in paths:
-            frame = pd.read_parquet(path)
+            frame = pd.read_parquet(path, dtype_backend="pyarrow")
             self._add_frame(frame, daily, counts)
             logger.info("Read %s (%s rows)", path.name, len(frame))
         if not counts["rows_used"]:

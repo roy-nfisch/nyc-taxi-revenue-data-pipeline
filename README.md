@@ -227,6 +227,9 @@ dimension describes every day in the period. They join through `service_date`.
   included. We retain zero and negative amounts rather than assuming they are errors.
 - Invalid dates/amounts and out-of-period pickups are excluded and counted.
   Missing payment type alone does not exclude an otherwise usable ride.
+- Parquet numeric types are preserved before money validation; finite sub-cent
+  amounts stop the run rather than being rounded. See the
+  [numeric precision notes](docs/etl-parquet-precision.md), including float32.
 - File months and pickup months can differ. These results describe the reviewed
   source files, not a guarantee for future downloads or every ride in the city.
 - Checksums identify the input bytes; they do not prove the fares are correct.
