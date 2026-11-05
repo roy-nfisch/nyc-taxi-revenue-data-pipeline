@@ -85,6 +85,22 @@ The plain batch also runs in the image with
 `docker compose run --rm --no-deps pipeline`, without Prefect.
 Stop the server with `docker compose down`; reports and run history are retained.
 
+### Run the published image
+
+The [public GHCR image](https://github.com/users/roy-nfisch/packages/container/package/nyc-taxi-revenue-data-pipeline)
+is available as `2026.11.05` and `latest`. No registry login or local build is needed:
+
+```bash
+docker run --rm --platform linux/amd64 \
+  --mount type=volume,source=nyc-taxi-release-data,target=/data \
+  ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline:2026.11.05
+```
+
+This runs the batch, not a public service. Reports persist in the named volume.
+The image is Linux amd64; Apple Silicon uses emulation. Native local builds remain
+available. See the [verified release and Compose instructions](docs/docker-prefect.md#publish-to-ghcr)
+for the digest, result inspection and optional Prefect setup.
+
 ### Follow a run
 
 One Prefect flow calls three tasks in order: **download → calculate → save**.
