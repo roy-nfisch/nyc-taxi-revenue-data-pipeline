@@ -73,14 +73,21 @@ An alternative orchestrator would need a documented decision before switching.
 Implemented layout:
 
 ```text
-src/green_taxi/           Settings, download, calculation, report, pipeline, flow, and __main__.py
-tests/green_taxi/         Matching test modules; small fixtures, no live downloads in CI
+src/green_taxi/           Shared settings, download, reporting, writer, CLI and logs
+src/green_taxi/etl/       Python calculation, coordinator and Prefect flow
+tests/green_taxi/         Shared tests/fixtures; no live downloads in CI
+tests/green_taxi/etl/     Matching ETL tests, including flow runtime and provenance
 tests/docker/            Image and Compose checks with synthetic inputs
 compose*.yaml            Local Prefect services and optional read-only config mount
 Dockerfile               Non-root packaged application
 data/raw/                Original downloaded files — ignored
 data/processed/          Generated fact/date tables and run counts — ignored
 ```
+
+The layout separates ETL-specific stages from reusable components; it does not
+change the accepted data rules. `python -m green_taxi` still runs the existing
+command, and `python -m green_taxi.flow` delegates to `green_taxi.etl.flow`.
+The optional ELT extension remains a separate proposal in ADR 002.
 
 ## Accepted data rules
 

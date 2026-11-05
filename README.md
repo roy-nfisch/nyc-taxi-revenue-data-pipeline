@@ -200,6 +200,11 @@ continuous event stream.
 `ReportWriter`. Downloading, calculation and publication keep separate
 responsibilities.
 
+The Python calculator, coordinator and Prefect flow live in `green_taxi.etl`.
+Settings, downloading, report contracts and writing stay shared at package level.
+The existing commands still run ETL; `green_taxi.flow` delegates to the moved flow.
+There is no implemented ELT path yet.
+
 ## Results and limitations
 
 The January–March 2025 [real-data review](docs/data-review.md) recorded:
@@ -263,13 +268,17 @@ nyc-taxi-revenue-data-pipeline/
 ├── src/green_taxi/
 │   ├── settings.py, defaults.json  # Validated run settings
 │   ├── download.py                 # Download and check raw files
-│   ├── revenue.py                  # Apply rules and calculate daily totals
+│   ├── reporting.py                # Shared result, calendar and money helpers
 │   ├── report.py                   # Check and save the report
-│   ├── pipeline.py                 # Connect the stage objects
-│   ├── flow.py                     # Prefect tasks and flow
-│   └── __main__.py, logging.py     # Terminal entry point and logs
+│   ├── flow.py                     # Delegate for the existing Prefect command
+│   ├── __main__.py, logging.py     # Terminal entry point and logs
+│   └── etl/
+│       ├── revenue.py              # Apply rules and calculate daily totals
+│       ├── pipeline.py             # Connect the existing stage objects
+│       └── flow.py                 # Prefect tasks and flow
 ├── tests/
-│   ├── green_taxi/                 # Mirrors the Python package
+│   ├── green_taxi/                 # Shared component tests and fixtures
+│   │   └── etl/                    # Mirrors the Python ETL modules
 │   └── docker/                     # Image and Compose checks
 ├── notebooks/                      # Optional data exploration
 ├── docs/                           # Design, data review and run guide

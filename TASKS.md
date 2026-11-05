@@ -331,18 +331,18 @@ and dotenv contract checks passed in the final Docker CI job.
 
 ## Optional follow-up — not a release requirement
 
-- [ ] **T11 — Explore an ELT version.** Design proposed for review in
+- [ ] **T11 — Explore an ELT version.** Design reviewed and merged in
+  [PR #11](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/pull/11);
   [ADR 002](docs/adr/002-elt-comparison.md): DuckDB, plain SQL, transactional raw
-  loading and a separate optional execution path. No implementation until the
-  database and approach are approved. Keep the checked ETL implementation as
+  loading and a separate optional execution path. Folder separation is in progress
+  in T11.1; no database or ELT stages have been added. Keep the checked ETL implementation as
   the comparison baseline; this task does not block T07/T10 or public release.
   GPT-6 Astra and GPT-6.1 Terra reviewed the proposal. The owner accepted their
   clarifications: preserve raw types without turning invalid rows into batch
   failures, verify installed-package/container execution and ETL without extras,
   avoid mandatory per-ride identity, and extract shared helpers only when needed.
   ADR 002 records the checks and why this is a learning comparison, not an upgrade.
-  This is a design-only change; no database, dependencies or pipeline behavior
-  have changed. Implementation waits for owner approval of ADR 002.
+  T11.2 and later work remain separate from the behaviour-preserving folder move.
 
 ### T11 delivery plan
 
@@ -357,6 +357,16 @@ not completed work or permission to publish.
   Docker behaviour. **PR boundary:** file moves and required compatibility work
   only, with no DuckDB or ELT implementation. Done when existing ETL checks and
   output comparisons pass.
+  In progress: moved calculator/coordinator/flow and their tests; kept the root
+  CLI and Prefect delegate; preserved log categories and checkout provenance.
+  Python verification passes 262 tests (15 Docker checks skipped), Ruff lint/format
+  and package build. Moved calculation/helper bodies match main, and synthetic
+  output comparisons match facts, dates, counts and exact totals. The installed
+  wheel imports the nested modules/defaults and delegate outside the checkout.
+  CI already discovers `tests/` recursively and setuptools discovers the new
+  package, so neither configuration needs a path change. Docker execution was
+  explicitly excluded by the owner; its verification and owner review remain
+  outstanding before this task is marked done.
 
 - [ ] **T11.2 — Define the ELT foundation.** Depends on merged T11.1. Agree the
   lossless raw representation, source identity/registry schema, warehouse method

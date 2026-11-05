@@ -1,17 +1,16 @@
 """Small rule checks: no source downloads, report writes, or Prefect runtime."""
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 from decimal import Decimal, localcontext
 from fractions import Fraction
 
 import pandas as pd
 import pytest
 
-from green_taxi.revenue import (
+from green_taxi.reporting import (
     build_date_dimension,
     decimal_amount,
     recorded_cents,
-    recorded_date,
 )
 from green_taxi.settings import ReportingPeriod
 
@@ -60,25 +59,6 @@ def test_decimal_result_is_exact_under_small_caller_precision(cents):
         assert actual.as_tuple().exponent == -2
 
 
-@pytest.mark.parametrize(
-    "value",
-    [
-        None,
-        pd.NaT,
-        pd.NA,
-        1735689600,
-        True,
-        "31.02.2025",
-        "01/02/2025",
-        "invalid",
-        datetime(2025, 1, 1, tzinfo=timezone.utc),
-    ],
-)
-def test_invalid_pickup_is_not_guessed(value):
-    """Reject missing, invalid, ambiguous, numeric-epoch and timezone-aware input."""
-    assert recorded_date(value) is None
-
-
 def test_calendar_uses_configured_period(reporting_settings):
     """The dimension covers the entire period, regardless of whether rides exist."""
     period = reporting_settings.reporting_period
@@ -108,18 +88,3 @@ def test_short_period_has_matching_calendar_attributes():
         "month": 2,
         "day_of_month": 29,
     }
-
-
-@pytest.mark.parametrize(
-    "value",
-    [
-        "2025-02-03",
-        "2025-02-03T23:59:59",
-        date(2025, 2, 3),
-        datetime(2025, 2, 3, 12),
-        pd.Timestamp("2025-02-03"),
-    ],
-)
-def test_supported_pickup_representations(value):
-    """Native dates and ISO strings preserve the recorded day without shifting it."""
-    assert recorded_date(value) == date(2025, 2, 3)

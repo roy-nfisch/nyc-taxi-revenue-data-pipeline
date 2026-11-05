@@ -11,7 +11,7 @@ from prefect import flow
 from prefect.client.orchestration import get_client
 from prefect.testing.utilities import prefect_test_harness
 
-from green_taxi.flow import download_inputs, taxi_flow
+from green_taxi.etl.flow import download_inputs, taxi_flow
 
 pytestmark = [pytest.mark.integration, pytest.mark.data]
 
@@ -38,7 +38,7 @@ def prefect_server():
 
 def test_prefect_matches_plain_python_and_rebuilds(pipeline_setup, monkeypatch):
     """Both execution paths save equivalent real tables; second flow reuses inputs."""
-    from green_taxi.pipeline import TaxiPipeline
+    from green_taxi.etl.pipeline import TaxiPipeline
 
     pipeline, session = pipeline_setup
     marker = pipeline.run()
@@ -130,7 +130,7 @@ def test_full_flow_fails_without_running_later_stages(
     """Actual flow failure must preserve prior reports and stop later operations."""
     from unittest.mock import MagicMock
 
-    from green_taxi.pipeline import TaxiPipeline
+    from green_taxi.etl.pipeline import TaxiPipeline
 
     pipeline, _ = pipeline_setup
     marker = pipeline.run()

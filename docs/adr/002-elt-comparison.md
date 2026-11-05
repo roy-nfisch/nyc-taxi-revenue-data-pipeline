@@ -1,6 +1,7 @@
 # Compare ETL and ELT
 
-Status: proposed for owner review. No ELT implementation is included yet.
+Status: design reviewed and merged in PR #11. ETL folder separation is in progress;
+no database-first ELT stages or optional dependencies have been implemented yet.
 
 ## Why add this
 
@@ -97,8 +98,9 @@ No PostgreSQL server, dbt project or new orchestration framework is proposed.
 
 ## Proposed file tree
 
-This is the intended layout, not files already implemented. ETL and ELT become
-sibling folders inside the same package. Shared components stay outside both;
+This shows the intended full layout. The ETL/shared separation is being
+implemented first; the `elt/` package and its SQL/tests/storage are not built yet.
+ETL and ELT become sibling folders inside the same package. Shared components stay outside both;
 moving files must not duplicate their implementations or change ETL behaviour.
 Only the parts relevant to the comparison are shown.
 
@@ -165,7 +167,7 @@ shared components. Both paths share the inputs and output contract; the
 transformation engine changes.
 Paths below are relative to `src/green_taxi/`.
 
-| Existing file | Proposed location | Connection between ETL and ELT |
+| Original file | Location after separation | Connection between ETL and ELT |
 |---|---|---|
 | `settings.py` | Unchanged | Shared reporting period and settings validation. |
 | `download.py` | Unchanged | Shared downloader and unchanged staged Parquet files. |
@@ -230,4 +232,5 @@ facts and USD 3,395,290.56; changed files require fresh reconciliation.
 - [ ] Approve plain SQL rather than adding dbt now.
 - [ ] Approve a separate optional ELT path while retaining ETL as the default.
 
-This proposal does not change the application, dependencies, image or data.
+The first delivery step only reorganises ETL/shared code and tests. Database
+dependencies, SQL transformations, ELT images and data storage remain later tasks.
