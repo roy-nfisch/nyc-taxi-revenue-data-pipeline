@@ -334,8 +334,9 @@ and dotenv contract checks passed in the final Docker CI job.
 - [ ] **T11 — Explore an ELT version.** Design reviewed and merged in
   [PR #11](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/pull/11);
   [ADR 002](docs/adr/002-elt-comparison.md): DuckDB, plain SQL, transactional raw
-  loading and a separate optional execution path. Folder separation is in progress
-  in T11.1; no database or ELT stages have been added. Keep the checked ETL implementation as
+  loading and a separate optional execution path. Folder separation is merged;
+  the optional dependency/registry foundation is in progress in T11.2, with no
+  loading or transformation stages. Keep the checked ETL implementation as
   the comparison baseline; this task does not block T07/T10 or public release.
   GPT-6 Astra and GPT-6.1 Terra reviewed the proposal. The owner accepted their
   clarifications: preserve raw types without turning invalid rows into batch
@@ -351,22 +352,24 @@ Keep objects small, use composition and reuse fixtures; do not create a new
 framework or duplicate the existing ETL tests. The following are proposed tasks,
 not completed work or permission to publish.
 
-- [ ] **T11.1 — Separate the folders.** Depends on ADR approval. Move ETL-specific
+- [x] **T11.1 — Separate the folders.** Reviewed and merged in
+  [PR #12](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/pull/12).
+  Move ETL-specific
   code/tests into `etl/` and extract shared reporting contracts/helpers as proposed.
   Update affected imports, CI paths and docs; preserve existing commands and
   Docker behaviour. **PR boundary:** file moves and required compatibility work
   only, with no DuckDB or ELT implementation. Done when existing ETL checks and
   output comparisons pass.
-  In progress: moved calculator/coordinator/flow and their tests; kept the root
+  Completed: moved calculator/coordinator/flow and their tests; kept the root
   CLI and Prefect delegate; preserved log categories and checkout provenance.
   Python verification passes 262 tests (15 Docker checks skipped), Ruff lint/format
   and package build. Moved calculation/helper bodies match main, and synthetic
   output comparisons match facts, dates, counts and exact totals. The installed
   wheel imports the nested modules/defaults and delegate outside the checkout.
   CI already discovers `tests/` recursively and setuptools discovers the new
-  package, so neither configuration needs a path change. Docker execution was
-  explicitly excluded by the owner; its verification and owner review remain
-  outstanding before this task is marked done.
+  package, so neither configuration needed a path change. Local Docker execution
+  was excluded by the owner. The merged PR's quality, unit, integration and Docker
+  jobs all passed; Docker verification was performed in GitHub Actions, not locally.
 
 - [ ] **T11.2 — Define the ELT foundation.** Depends on merged T11.1. Agree the
   lossless raw representation, source identity/registry schema, warehouse method
@@ -375,6 +378,20 @@ not completed work or permission to publish.
   dependency/packaging setup and focused checks, not loading or business SQL.
   Done when the parallel tasks can use the same contracts and ETL still runs
   without DuckDB. Avoid placeholder methods or a generic backend abstraction.
+  In progress: the [ETL and ELT contracts](docs/etl-elt-contract.md) define one raw
+  table per source, serialized Arrow schema metadata, source-scoped identity,
+  storage paths and future warehouse operations. DuckDB 2.0.0 is locked behind
+  the `elt` extra; registry DDL is package data. Focused checks cover registry
+  identity constraints and imports without the engine. Integration CI installs
+  the extra; unit and Docker jobs retain default dependencies. No loader, SQL
+  business rules, coordinator, database file or Docker configuration is added.
+  Local verification: 265 tests passed without the extra (25 skipped), and 275
+  passed with it (15 Docker checks skipped). Ruff lint/format, lock consistency
+  and package build passed. An installed-wheel check outside the checkout read
+  and executed the packaged DDL in memory and confirmed optional-engine metadata.
+  Import checks are separated into shared, ETL and ELT tests, reusing one passive-
+  import fixture. The default-installation run confirms DuckDB is absent.
+  Owner review and branch CI remain pending before this task is marked done.
 
 - [ ] **T11.3 — Build raw loading.** Depends on merged T11.2. Implement the small
   warehouse object, source registry and transactional source replacement. Preserve
