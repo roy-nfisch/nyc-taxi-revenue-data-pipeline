@@ -169,6 +169,40 @@ class TaxiWarehouse:
             paths.add(resolved)
         return selected
 
+    def calculate(self, inputs, period):
+        """Return SQL results for exactly these checked sources, without publishing.
+
+        Require a matching registry entry and unchanged staged bytes. A read
+        transaction keeps all selected tables consistent; query failures roll back.
+        """
+        from green_taxi.elt.queries import WarehouseQueries
+
+        if self._connection is None:
+            raise RuntimeError("Enter the warehouse context before calculating.")
+        selected = self._validate_inputs(inputs)
+        connection = self._connection
+        connection.execute("BEGIN TRANSACTION")
+        try:
+            sources = []
+            for item in selected:
+                _verify_bytes(item, item.path.read_bytes())
+                rows = connection.execute(
+                    "SELECT sha256, size_bytes, arrow_schema FROM loaded_sources WHERE source_id = ?",
+                    [item.path.name],
+                ).fetchall()
+                if not rows or rows[0][:2] != (item.sha256, item.size_bytes):
+                    raise ValueError(
+                        f"Source is not loaded with this identity: {item.path.name}"
+                    )
+                schema = pa.ipc.read_schema(pa.BufferReader(rows[0][2]))
+                sources.append((_raw_identifier(item.month), schema))
+            result = WarehouseQueries(connection).calculate(sources, period)
+            connection.execute("COMMIT")
+            return result
+        except BaseException:
+            connection.execute("ROLLBACK")
+            raise
+
     def _load_source(self, item: StagedFile) -> None:
         """Read one checked snapshot, then reuse or transactionally replace it."""
         content = item.path.read_bytes()

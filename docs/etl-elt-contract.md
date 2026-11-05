@@ -1,16 +1,15 @@
 # ETL and ELT contracts
 
 This document distinguishes the existing Python ETL from the planned database-first
-ELT. Raw loading and transformation SQL are available as separate components;
-there is no end-to-end ELT command yet.
+ELT. Both paths have manual commands and reuse the same checked report contract.
 The design is described in [ADR 002](adr/002-elt-comparison.md).
 
-| | ETL — implemented | ELT — proposed |
+| | ETL | ELT |
 |---|---|---|
 | Stages | Download → Python calculation → save | Download → load raw data → SQL transformation → save |
 | Code | `green_taxi.etl` | `green_taxi.elt` |
-| Entry point | `python -m green_taxi --run` | Not implemented yet |
-| Orchestration | `green_taxi.flow` delegates to `green_taxi.etl.flow` | Separate Prefect flow planned |
+| Entry point | `python -m green_taxi --run` | `python -m green_taxi.elt` |
+| Orchestration | `green_taxi.flow` delegates to `green_taxi.etl.flow` | `green_taxi.elt.flow` |
 | Output | `data/processed/` | `data/elt/processed/` |
 
 Settings, the downloader, reporting contract and writer are shared. The registry,
@@ -121,7 +120,7 @@ ETL. This describes the query interface, not implemented transformation SQL.
 
 ### Warehouse operations
 
-These are proposed method contracts for review, not placeholder Python methods:
+These methods are implemented by the context-managed warehouse:
 
 | Proposed operation | Inputs | Result and failure behaviour |
 |---|---|---|

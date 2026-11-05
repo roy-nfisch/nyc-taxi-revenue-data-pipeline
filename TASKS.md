@@ -399,63 +399,21 @@ not completed work or permission to publish.
   before parallel work. PR #13, including its review fixes, is merged; T11.3–T11.5
   start from that shared foundation.
 
-- [ ] **T11.3 — Build raw loading.** Depends on merged T11.2. Implement the small
-  warehouse object, source registry and transactional source replacement. Preserve
-  raw type distinctions and scope cached identities to their source files.
-  **PR boundary:** `elt/warehouse.py`, raw schema/registry SQL and loading tests.
-  Done when tiny inputs cover unchanged/changed sources, equal bytes in different
-  sources, mixed required-column types and rollback without partial publication.
-  Ready for review: `TaxiWarehouse` owns its context-bounded optional connection,
-  checked source identities and per-source replacement transactions. Original
-  Arrow schemas stay in the registry; scalar mappings must pass full native
-  value round trips before commit. Duplicate rows, boolean amounts and aware
-  nanosecond pickups are preserved. Unsupported or lossy schemas fail explicitly.
-  [Loading notes](docs/elt-loading.md) describe supported mappings, failure/reuse
-  semantics and the one-file memory limit. Focused tests cover unchanged/changed
-  sources, equal bytes under distinct filenames, staged-byte changes, mixed
-  types, schema metadata, persistent timestamps and rollback. No calculation
-  placeholder, ETL behavior change or local Docker execution is included.
-  Local Python verification: 316 tests passed, including existing Prefect runtime
-  and installed-wheel checks. Ruff lint/format passed for `src`, `tests` and
-  `.github/scripts`; the focused ELT suite includes 50 passing tests. Independent
-  review and CI remain pending; this task is not marked complete.
+- [x] **T11.3 — Build raw loading.** Reviewed and merged in PR #15.
+  Checked native storage, per-source registry identity, lossless verification,
+  safe reuse/replacement and rollback are implemented and covered by tests.
 
-- [ ] **T11.4 — Build SQL transformations.** Depends on merged T11.2; may run
-  alongside T11.3. Implement classification, daily aggregation and counters using
-  the agreed raw contract. **PR boundary:** transformation SQL and its query tests;
-  do not edit the loader. Done when queries match ETL dates, exact-cent amounts,
-  counts and exclusion order on shared fixtures, including invalid rows and
-  sub-cent failure cases. Runtime result conversion is connected in T11.6.
-  **Draft for review:** packaged per-source classification, exact `BIGNUM`
-  daily totals and counters, with independent SQL/ETL query tests. SQL retains
-  exact nullable integers; real-Parquet tests document baseline pandas
-  dtype/metadata precision and validation gaps. A separate ETL fix is approved;
-  universal parity and task completion are not claimed. See
-  [SQL boundary and limitations](docs/elt-sql.md).
+- [x] **T11.4 — Build SQL transformations.** Reviewed and merged in PR #16.
+  Packaged classification, exact-cent aggregation/counters and the money-text
+  helper are covered by named boundary and real-Parquet tests. The supporting
+  ETL precision fix is merged in PR #17. Runtime integration remains below.
 
-- [ ] **T11.5 — Prepare Docker delivery.** Depends on merged T11.2; may run
-  alongside T11.3 and T11.4. Add an explicit optional ELT build/run configuration,
-  SQL resource installation, container checks and run-guide preparation.
-  **PR boundary:** Docker/Compose, delivery CI and packaging smoke tests; do not
-  implement pipeline stages. Done when the optional dependency/resources work
-  from an installed package/container and default ETL remains usable without
-  DuckDB. Full ELT execution is verified in T11.6, not claimed here.
-  In progress: explicit `INSTALL_ELT=true` build support and a separate manual
-  `compose.elt.yaml` preparation service install DuckDB and packaged registry SQL.
-  The default image stays ETL-only; no ports, Prefect dependency or ELT pipeline
-  command are added. Delivery CI builds both variants and checks Compose isolation,
-  non-root in-memory SQL execution and DuckDB's absence from the default image.
-  The release workflow builds the optional variant only for verification and
-  still archives/publishes the default ETL image alone. The
-  [preparation guide](docs/elt-docker.md) distinguishes these checks from future
-  T11.6 execution and T11.7 publication.
-  Local verification: both image builds passed; 17 isolated Docker checks passed
-  without starting Prefect or downloading public data. The optional Python
-  installation passed 277 tests; Ruff lint/format and the package build passed.
-  The existing full Compose server/flow check remains for CI, not claimed as
-  locally verified. Review and owner approval are pending before completion.
+- [x] **T11.5 — Prepare Docker delivery.** Reviewed and merged in PR #14.
+  Separate ELT image, SQL resources and isolated non-root checks are available.
+  The default ETL image remains unchanged; no ELT publication has occurred.
 
-- [ ] **T11.6 — Connect and verify.** Depends on merged T11.3, T11.4 and T11.5.
+- [x] **T11.6 — Connect and verify.** Implementation verified; PR review pending.
+  Depends on merged T11.3, T11.4 and T11.5.
   Connect the ELT coordinator, manual entry point, Prefect stages and conversion
   to the shared `RevenueResult`/writer contract. Keep output destinations separate.
   **PR boundary:** runtime integration, parity/failure checks and final run docs.
@@ -463,6 +421,16 @@ not completed work or permission to publish.
   paths match on the same real source bytes and repeat without doubled results.
   Reconcile every daily value and run counter, audit the changes, and document
   the extra storage/maintenance cost before release.
+  Delivered: context-managed warehouse calculation, manual ELT command, four
+  sequential Prefect stages, separate reports, shared RunReport metadata/writer
+  lifecycle, packaged SQL and Docker batch/flow services. Mirrored tests use
+  pytest importlib mode so ETL and ELT filenames do not collide.
+  Verification: 486 parallel tests passed with Docker enabled; wheel/sdist,
+  Ruff lint/format and passive imports passed. Reviewed source copies reconciled
+  all daily values, calendar rows and counters on two SQL reruns:
+  146,486 read, 146,475 accepted, 90 dates and USD 3,395,290.56.
+  Storage/memory/maintenance costs and manual commands are in the run guide.
+  No image has been published; owner review and merge remain separate.
 
 - [ ] **T11.7 — Publish the reviewed ELT image.** Depends on merged T11.6, passing
   release checks and explicit owner approval. Agree an ELT image variant/package

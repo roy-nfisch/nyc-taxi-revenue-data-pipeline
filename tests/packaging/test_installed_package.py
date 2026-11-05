@@ -84,6 +84,27 @@ with duckdb.connect(':memory:') as database:
 """)
 
 
+def test_installed_elt_runs_with_packaged_sql(run_installed):
+    """The ELT wheel must execute SQL outside the checkout and preserve reruns."""
+    pytest.importorskip("duckdb")
+    run_installed("""
+import json
+from pathlib import Path
+import pandas as pd
+from green_taxi.settings import PipelineSettings
+from green_taxi.elt.pipeline import ELTPipeline
+settings = PipelineSettings(reporting_period={'start_month': '2031-01', 'duration_months': 1}, data_dir=Path('data'))
+settings.raw_dir.mkdir(parents=True)
+pd.DataFrame({'lpep_pickup_datetime': ['2031-01-01'], 'total_amount': [1.25]}).to_parquet(settings.raw_dir / 'green_tripdata_2031-01.parquet', index=False)
+pipeline = ELTPipeline(settings)
+for _ in range(2):
+    metadata = json.loads(pipeline.run().read_text())
+    assert metadata['total_amount'] == '1.25'
+    assert metadata['counts']['rows_used'] == 1
+assert not settings.processed_dir.exists()
+""")
+
+
 def test_installed_etl_runs_with_optional_engine_blocked(run_installed):
     """A complete tiny ETL run must work without importing the optional engine."""
     run_installed("""

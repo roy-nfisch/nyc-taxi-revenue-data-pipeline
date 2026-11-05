@@ -37,7 +37,7 @@ green_taxi = ["defaults.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--strict-markers"
+addopts = "--strict-markers --import-mode=importlib"
 markers = [
     "unit: isolated configuration and helper behaviour",
     "integration: components working together with real local files or processes",

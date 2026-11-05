@@ -1,8 +1,8 @@
 # Loading raw ELT sources
 
-`TaxiWarehouse` implements the raw-loading part of T11.3. This is not yet an
-ELT pipeline or reporting command: calculation and orchestration are separate
-tasks. Existing ETL commands and storage are unchanged.
+`TaxiWarehouse` owns checked raw loading and SQL calculation. The
+[ELT coordinator](elt-runtime.md) connects it to downloading and reporting.
+Existing ETL commands and storage are unchanged.
 
 Install the optional dependency with `uv sync --locked --extra elt`. Pass the
 downloader's staged inputs to the warehouse:

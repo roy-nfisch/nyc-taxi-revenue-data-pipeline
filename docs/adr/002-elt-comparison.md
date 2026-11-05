@@ -1,9 +1,8 @@
 # Compare ETL and ELT
 
-Status: design merged in PR #11; ETL folder separation merged in PR #12;
-optional dependency and registry foundation merged in PR #13. Loading, SQL and
-Docker preparation are reviewed in separate component PRs. There is no end-to-end
-ELT command yet; TASKS.md records each component's delivery status.
+ETL and ELT share one package and report contract. The database-first path uses
+checked raw loading, exact SQL transformations and its own output directory.
+See [running ELT](../elt-runtime.md) for the Python, Docker and Prefect commands.
 
 ## Why add this
 
@@ -103,11 +102,9 @@ with the rest of the project dependencies.
 
 No PostgreSQL server, dbt project or new orchestration framework is proposed.
 
-## Proposed file tree
+## File layout
 
-This shows the intended full layout. ETL/shared separation is implemented; the
-`elt/` package currently contains only the foundation registry SQL and tests.
-ELT loading, transformation, orchestration and storage are not built yet.
+This shows the main responsibilities of the two paths.
 ETL and ELT become sibling folders inside the same package. Shared components stay outside both;
 moving files must not duplicate their implementations or change ETL behaviour.
 Only the parts relevant to the comparison are shown.
@@ -237,7 +234,6 @@ The design was reviewed and merged in PR #11:
 - Plain SQL rather than adding dbt initially.
 - A separate optional ELT path while retaining ETL as the default.
 
-The ETL folder move is merged. The current foundation adds the optional dependency,
-registry DDL and contracts only. Loading, SQL business transformations, ELT images
-and persistent data storage are developed separately. The per-source query
-boundary is specified in the foundation contract.
+The per-source query boundary is specified in the shared contract. A separate
+ELT coordinator connects loading, SQL and publication without changing the
+default ETL command or its storage.

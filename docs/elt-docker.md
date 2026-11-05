@@ -3,10 +3,9 @@
 The ELT image includes DuckDB and the packaged SQL resources. The default ETL
 image does not include DuckDB and keeps its existing behaviour.
 
-The commands below check the engine and SQL resources only; they do not run an
-ELT pipeline. Connecting loading, transformations, reports and the ELT command
-and Prefect flow remains planned work. See the [contracts](etl-elt-contract.md)
-and [delivery plan](../TASKS.md#t11-delivery-plan).
+The inspection command below checks the engine and SQL resources without
+processing rides. See [run the ELT pipeline](elt-runtime.md) for the batch and
+Prefect commands, storage paths and failure behaviour.
 
 ## Build and inspect the ELT image
 
@@ -22,7 +21,8 @@ packaged, then exits. It starts no server, downloads no taxi data, and creates
 no database or reports. Do not use `compose up` for this check: the base file
 also defines the existing Prefect service. `--no-deps` keeps the check standalone.
 
-The override adds one manual-profile `elt-tools` service and builds the separate
+The override adds manual-profile `elt-tools`, `elt` and `elt-flow` services, using
+the separate
 `green-taxi-elt:local` image (`TAXI_ELT_IMAGE` can override its name). It explicitly
 sets `INSTALL_ELT=true`; the Dockerfile accepts only `true` or `false`. A normal
 `docker compose build` still installs only default ETL dependencies and builds
@@ -32,9 +32,9 @@ Prefect dependency, or automatic startup.
 Both images install the project non-editably and run as UID 10001. SQL is loaded
 through `importlib.resources`, not from the terminal's current directory. The
 preparation service shares the existing named `taxi-data:/data` mount but does
-not write to it. Future ELT storage stays in `/data/elt/warehouse.duckdb` and
+not write to it. ELT batch storage stays in `/data/elt/warehouse.duckdb` and
 `/data/elt/processed/`, separate from existing ETL `/data/processed/`. Those
-paths are a contract, not outputs produced by this preparation command.
+paths are used by the batch, not produced by the inspection command.
 
 ## Verify without starting a server
 

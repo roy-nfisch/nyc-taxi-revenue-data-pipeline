@@ -1,7 +1,7 @@
 # ELT SQL transformations
 
 These packaged queries classify rides and calculate daily revenue in DuckDB.
-They are not yet a runnable ELT pipeline. The [ETL and ELT contracts](etl-elt-contract.md)
+The [ELT pipeline](elt-runtime.md) connects these queries. The [ETL and ELT contracts](etl-elt-contract.md)
 define the source types and shared report format.
 
 ## SQL files
@@ -18,43 +18,50 @@ preserves Python 3.13's Unicode digit rules; it does not repair invalid money.
 
 ## SQL flow
 
-This shows the query dependencies; the application coordinator is not connected yet.
+Python must load and run these SQL files; they do not run one another automatically.
+The diagram shows their inputs and dependencies, not an automatic execution order.
 
 ```mermaid
 flowchart TD
-    A["normalize_money.sql<br/>Register helper once per connection"] --> C
+    A["normalize_money.sql<br/>Make the helper available"] -.->|helper used by| C
     B["Raw source table<br/>One file at a time"] --> C
     C["classify.sql<br/>Check each ride; call the helper for money text"] --> D
-    D["UNION ALL<br/>Combine classified rides; keep duplicates"] --> E
+    D["classified<br/>Combine results with UNION ALL; keep duplicates"] --> E
     D --> F
     E["counts.sql<br/>Count accepted, excluded and sub-cent rides"]
     F["daily_revenue.sql<br/>Count accepted rides and sum cents per day"]
 ```
 
-Both final queries read the same classifications; neither calls the other.
-The branches show shared inputs, not a promise of parallel execution.
+The dotted arrow supplies a helper, not ride data. Both final queries read the
+same combined results. Neither calls the other, and branching does not mean
+they automatically run in parallel.
 
 ## How to execute them
 
-Load SQL through `importlib.resources.files("green_taxi.elt").joinpath("sql/<name>.sql")`,
-not paths relative to the terminal. Execute `normalize_money.sql` once on each
-connection before classification. Its temporary macro creates no persistent data.
+The application runs these steps in order:
 
-For each source, replace `__SOURCE_TABLE__` with a validated, quoted table name:
-`"raw"."source_2025_01"`. Allow only `source_[0-9]{4}_(0[1-9]|1[0-2])`;
-never insert arbitrary filenames or SQL. Bind `period_start`, `period_end`,
-`pickup_kind` and `amount_kind` as values. The start is included; the end is not.
-Derive the kinds from the original Arrow schema, without changing its types.
+1. **Set up the helper.** Execute `normalize_money.sql` once per DuckDB connection.
+   It registers a temporary function; it does not process rides or save data.
+2. **Classify each source.** Run `classify.sql` for one raw table at a time.
+   Save each query's result in a temporary table before continuing.
+3. **Combine the results.** Use `UNION ALL` to create a table or view named
+   `classified`. This keeps duplicates and combines checked rows, not raw columns
+   with different types.
+4. **Check the counts.** Run `counts.sql`. Stop if `sub_cent > 0` (fractions of a
+   cent were found) or `rows_used = 0` (no accepted rides).
+5. **Calculate daily totals.** Run `daily_revenue.sql` against `classified`.
+   It returns `service_date`, `trip_count` and `revenue_cents`. Convert DuckDB's
+   integer-cent strings without using floats, then pass the results to reporting.
 
-Materialize each source's classification before checking or aggregating it.
-Combine classifications with `UNION ALL` into `classified`, preserving duplicates.
-Do not combine differently typed raw columns. The final two queries read that relation.
+Read the files through `importlib.resources.files("green_taxi.elt").joinpath("sql/<name>.sql")`,
+so execution does not depend on the terminal's directory.
 
-Before saving, fail the run if `sub_cent > 0` or `rows_used = 0`.
-`counts.sql` returns `COUNT_FIELDS` followed by `sub_cent`.
-Daily output is `service_date`, integer `trip_count` and `revenue_cents BIGNUM`.
-DuckDB returns revenue sums as integer strings; convert them to integer cents,
-never through a float.
+For classification, replace `__SOURCE_TABLE__` only with a validated, quoted
+name such as `"raw"."source_2025_01"`. Allow only
+`source_[0-9]{4}_(0[1-9]|1[0-2])`; never insert arbitrary filenames or SQL.
+Pass `period_start`, `period_end`, `pickup_kind` and `amount_kind` as bound values,
+not SQL text. The start date is included; the end date is excluded. Get the kinds
+from the original Arrow schema without converting its types.
 
 ## Rules and limits
 
