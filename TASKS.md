@@ -219,7 +219,7 @@ and dotenv contract checks passed in the final Docker CI job.
 
 ## Final review and public release
 
-- [ ] **T10 — Audit and prepare the project for public release.** In progress. After the
+- [x] **T10 — Audit and prepare the project for public release.** Completed. After the
   working pipeline, Docker, and Prefect are verified:
   - Audit code, data rules, security, tests, and documentation. Keep OOD simple;
     fix confirmed findings and rerun the checks. Include an independent review
@@ -240,22 +240,27 @@ and dotenv contract checks passed in the final Docker CI job.
   from the working tree and its CI/type-checker dependencies, retaining MIT notice
   and historical evidence. Targeted tracked-history checks found no matching private
   key/GitHub-token/AWS-key patterns; this is not a full secret or dependency audit.
-  Visibility changes and anonymous repository verification remain pending approval
-  after the final checks and review. No public-service hosting is planned.
+  The owner made the repository public. Anonymous GitHub API and HTTPS Git access
+  were verified on 05.11.2026. No public-service hosting was started.
   Final local verification on 05.11.2026: all 274 application, workflow-helper,
   and opt-in Docker checks passed together with two workers. Ruff lint/format,
   offline lockfile consistency, package/image builds, and actionlint validation
   passed. A fresh wheel install outside the checkout downloaded the agreed files
   and reproduced 146,475 accepted rides, 90 days and USD 3,395,290.56 on a rebuild.
   pip-audit found no known vulnerabilities in installed dependencies; it cannot
-  audit this unpublished local package. No registry/image-OS vulnerability scan
-  or full secret-scanner clearance is claimed. New branch CI has not run yet.
+  audit this local package because it is not a PyPI release. No registry/image-OS
+  vulnerability scan is claimed. PR #9 and main's CI subsequently
+  passed, including the Ubuntu 26.04 Docker job.
   Owner selected `ubuntu-26.04` for Docker CI and both publishing jobs; Python-only
   jobs retain `ubuntu-slim`. GitHub's official runner list confirms the hosted
   label. The local actionlint image has an older label table, so only that unknown-
-  label warning is excluded during syntax validation; GitHub runtime is unverified.
+  label warning was excluded during local validation; GitHub runtime then passed.
+  Full-history Gitleaks scan of an isolated GitHub mirror included all nine PR
+  histories: 35 reachable commits, 33 commit diffs scanned, zero leaks found.
+  Commit-author email and old course-reference commits remain visible as disclosed;
+  no history rewrite was performed. The README records the course context.
 
-- [ ] **T10a — Publish the reviewed Docker image to GHCR.** After T10 is complete
+- [x] **T10a — Publish the reviewed Docker image to GHCR.** Completed. After T10 is complete
   and its changes are merged, follow the King County release approach. At the
   owner's request the workflow is prepared alongside T10 for one final review;
   execution and public package verification still happen after merge:
@@ -284,9 +289,12 @@ and dotenv contract checks passed in the final Docker CI job.
   guard, pulled-image checks and `latest` promotion. Independent audit added
   OCI-index/manifest-list handling to prevent replacing an existing multi-platform
   tag. Registry guard regressions use mocked responses, not real publication.
-  No image or package visibility was changed. First GHCR authorization, Linux-amd64
-  execution on GitHub, public package access and anonymous pull remain unverified
-  until an approved release. The first publication must wait until T10 is merged.
+  Release `2026.11.05` passed verification/publication from main at `f78262b` in
+  [run 42076273246](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/actions/runs/42076273246).
+  Public package access was confirmed; dated/latest tags pulled with empty Docker
+  login configuration and matched. A fresh published-image run as UID 10001 produced
+  146,475 accepted rides, 90 daily facts and USD 3,395,290.56. The digest, platform
+  and commands are recorded in the Docker guide. No API or Prefect service deployed.
 
 - [x] **T10b — Add a small data exploration notebook.** Completed. Show the coach's
   exploration step in `notebooks/`, without moving pipeline logic out of `src/`:
