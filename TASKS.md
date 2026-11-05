@@ -145,7 +145,7 @@ T08 and T09 were reviewed and merged in
   Pipeline values stay in JSON; Python has no dotenv loader. Tests cover automatic
   `.env` loading, shell precedence, and packaged defaults without the override.
 
-T08 and T09 are complete. Continue with **T07 → T10b → T10 → T10a**;
+T08 and T09 are complete. Continue with **T07 → T10b → T10 → T10a → portfolio review**;
 the optional ELT comparison remains separate.
 
 Prior verification, before the latest follow-up: 215 native application tests passed (13 opt-in Docker tests
@@ -188,9 +188,10 @@ config copy, or `.env` is required. `TAXI_CONFIG_FILE` remains an optional overr
 missing files still fail and all config mounts remain read-only. Updated fallback
 and dotenv contract checks passed in the final Docker CI job.
 
-## In progress — project documentation
+## Done — project documentation
 
-- [ ] **T07 — Prepare the portfolio and closeout documentation.** In progress.
+- [x] **T07 — Prepare the portfolio and closeout documentation.** Completed on
+  `main` as commit `d62790f`, after the owner reviewed the README.
   T08 and T09 are verified. Update the README with the actual file tree, working
   commands, a small output example, and course reflections. Explain why this is
   batch ETL, how to manually launch/rebuild the reporting period, and how to
@@ -205,7 +206,7 @@ and dotenv contract checks passed in the final Docker CI job.
   setup/run instructions and stale timing figures, and clarified data rules,
   configuration, storage, and source tracing. Static link/structure and whitespace
   checks completed; no tests or pipeline runs were started for this task. Owner
-  review and a new-reader walkthrough remain before marking the task done.
+  review is complete; a new-reader walkthrough remains in the final release review.
   Portfolio pass adds a real completed Prefect-run screenshot and explains
   sequential tasks, bounded retries, and result logs. Setup commands are
   collapsible so the landing page leads with the project and working evidence.
@@ -232,12 +233,8 @@ and dotenv contract checks passed in the final Docker CI job.
     Do not rewrite history without separate approval if sensitive content is found.
   - Make the repository public once release checks pass and verify anonymous
     access. This does not authorize public service hosting or image publication.
-  - Assess whether the finished project adds value to grossman.engineering
-    alongside King County. Record the recommendation; if agreed, add a short
-    English/German project entry linking to the final repository without repeating
-    its detailed documentation.
   Done when findings are resolved or clearly documented, the renamed public
-  repository works for a new visitor, and the portfolio decision is recorded.
+  repository works for a new visitor.
 
 - [ ] **T10a — Publish the reviewed Docker image to GHCR.** After T10 is complete
   and its changes are merged, follow the King County release approach in a
@@ -263,10 +260,10 @@ and dotenv contract checks passed in the final Docker CI job.
   work. Publishing distributes the image; it does not deploy the pipeline or
   expose Prefect publicly. This task does not block completion of T10.
 
-- [ ] **T10b — Add a small data exploration notebook.** Show the coach's
+- [x] **T10b — Add a small data exploration notebook.** Completed. Show the coach's
   exploration step in `notebooks/`, without moving pipeline logic out of `src/`:
-  - Read one existing staged Green Taxi file; do not download or modify raw data.
-    Explain how to stage the file first if it is missing.
+  - Explore existing staged Green Taxi files for the selected period. An optional
+    download cell reuses the existing downloader; analysis never modifies raw data.
   - Inspect pickup timestamps and `total_amount`: types, missing values, date
     and amount ranges, negative/zero amounts, and out-of-period pickups.
   - Explain how the observations support the approved cleaning rules. Link to
@@ -276,6 +273,25 @@ and dotenv contract checks passed in the final Docker CI job.
   Done when it runs top to bottom on a staged file and its conclusions match
   the observed data. Clear outputs, execution counts, and unnecessary metadata
   before committing; link it from the README. No new pipeline features required.
+  Staged the three official files and executed the notebook against January in a
+  disposable container with the checkout read-only. It found 48,326 rows, six
+  pickups outside January–March, 153 negative and 33 zero amounts, matching the
+  recorded inspection. Both selected columns had no missing values. Notebook
+  outputs and execution counts are cleared for commit. The owner explored the
+  notebook in Jupyter and requested dynamic period selection and optional downloads.
+  Exploration now follows the selected period end to end: source files, row
+  counts, date checks and labels. Verified in-memory notebook runs for March
+  alone (51,539 rows; 11 outside March) and January–March (146,486 rows; 11
+  outside that period). Final review checked settings, file selection, date checks,
+  labels, and missing-file instructions. Saved outputs and environment metadata
+  were removed; the owner's March/four-month setting is preserved. No new notebook
+  execution or test-suite run was performed during this cleanup.
+
+- [ ] **Portfolio review — Revisit the website entry.** After T10b, T10, and
+  T10a are complete, assess whether the finished project adds value to
+  grossman.engineering alongside King County. If agreed, add a short English and
+  German entry linking to the public repository, focusing on verified results and
+  how to reproduce them without repeating its documentation.
 
 ## Optional follow-up — not a release requirement
 
