@@ -1,6 +1,12 @@
 # NYC Taxi Revenue Data Pipeline
 
 [![CI on main](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/actions/workflows/ci.yml?query=branch%3Amain)
+[![Tests: unit, integration, data](https://img.shields.io/badge/tests-unit%20%7C%20integration%20%7C%20data-blue)](#run-the-checks)
+[![Python 3.13](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)](#run-locally)
+[![Processing: batch ETL](https://img.shields.io/badge/processing-batch%20ETL-blue)](#the-flow)
+[![Prefect: local orchestration](https://img.shields.io/badge/Prefect-local%20orchestration-blue)](#follow-a-run)
+[![Docker: local](https://img.shields.io/badge/Docker-local-2496ED?logo=docker&logoColor=white)](#run-with-docker-and-prefect)
+[![GHCR: public image](https://img.shields.io/badge/GHCR-public%20image-blue)](https://github.com/users/roy-nfisch/packages/container/package/nyc-taxi-revenue-data-pipeline)
 
 We built a small, object-oriented Python pipeline that turns NYC Green Taxi
 records into daily revenue reports. Our focus was reliable downloads, clear data
