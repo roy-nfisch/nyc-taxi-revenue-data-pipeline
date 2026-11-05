@@ -331,23 +331,99 @@ and dotenv contract checks passed in the final Docker CI job.
 
 ## Optional follow-up — not a release requirement
 
-- [ ] **T11 — Explore an ELT version.** Keep the checked ETL implementation as
+- [ ] **T11 — Explore an ELT version.** Design proposed for review in
+  [ADR 002](docs/adr/002-elt-comparison.md): DuckDB, plain SQL, transactional raw
+  loading and a separate optional execution path. No implementation until the
+  database and approach are approved. Keep the checked ETL implementation as
   the comparison baseline; this task does not block T07/T10 or public release.
-  - Agree on a short ADR before implementation. Choose one local analytical
-    database (DuckDB or PostgreSQL), not two implementations.
-  - Extract the same taxi files, then load unchanged source records into raw
-    database tables before applying business transformations. Merely staging
-    Parquet files on disk does not make the current pipeline ELT.
-  - Transform inside the database using SQL, optionally managed by dbt, to build
-    the same daily facts and date dimension. Prefect coordinates the stages;
-    reuse existing downloading, settings, and source identities where suitable.
-  - Preserve the approved dates, exclusions, exact-cent money rules, and lineage.
-    Make repeated raw loads and report builds safe without duplicated records.
-  - Compare all daily values, counts, date references, and totals with the ETL
-    baseline. Test invalid records and rebuilds, document the trade-offs, and
-    keep the code simple and OOD first.
-  Done when an ELT run is reproducible and equivalent under the agreed rules,
-  with a clear explanation of when the extra database/SQL layer is worthwhile.
+  GPT-6 Astra and GPT-6.1 Terra reviewed the proposal. The owner accepted their
+  clarifications: preserve raw types without turning invalid rows into batch
+  failures, verify installed-package/container execution and ETL without extras,
+  avoid mandatory per-ride identity, and extract shared helpers only when needed.
+  ADR 002 records the checks and why this is a learning comparison, not an upgrade.
+  This is a design-only change; no database, dependencies or pipeline behavior
+  have changed. Implementation waits for owner approval of ADR 002.
+
+### T11 delivery plan
+
+Each implementation task includes its focused tests, documentation and review.
+Keep objects small, use composition and reuse fixtures; do not create a new
+framework or duplicate the existing ETL tests. The following are proposed tasks,
+not completed work or permission to publish.
+
+- [ ] **T11.1 — Separate the folders.** Depends on ADR approval. Move ETL-specific
+  code/tests into `etl/` and extract shared reporting contracts/helpers as proposed.
+  Update affected imports, CI paths and docs; preserve existing commands and
+  Docker behaviour. **PR boundary:** file moves and required compatibility work
+  only, with no DuckDB or ELT implementation. Done when existing ETL checks and
+  output comparisons pass.
+
+- [ ] **T11.2 — Define the ELT foundation.** Depends on merged T11.1. Agree the
+  lossless raw representation, source identity/registry schema, warehouse method
+  inputs/results and storage paths before parallel work. Add the optional `elt`
+  dependency and SQL resource packaging. **PR boundary:** shared contracts,
+  dependency/packaging setup and focused checks, not loading or business SQL.
+  Done when the parallel tasks can use the same contracts and ETL still runs
+  without DuckDB. Avoid placeholder methods or a generic backend abstraction.
+
+- [ ] **T11.3 — Build raw loading.** Depends on merged T11.2. Implement the small
+  warehouse object, source registry and transactional source replacement. Preserve
+  raw type distinctions and scope cached identities to their source files.
+  **PR boundary:** `elt/warehouse.py`, raw schema/registry SQL and loading tests.
+  Done when tiny inputs cover unchanged/changed sources, equal bytes in different
+  sources, mixed required-column types and rollback without partial publication.
+
+- [ ] **T11.4 — Build SQL transformations.** Depends on merged T11.2; may run
+  alongside T11.3. Implement classification, daily aggregation and counters using
+  the agreed raw contract. **PR boundary:** transformation SQL and its query tests;
+  do not edit the loader. Done when queries match ETL dates, exact-cent amounts,
+  counts and exclusion order on shared fixtures, including invalid rows and
+  sub-cent failure cases. Runtime result conversion is connected in T11.6.
+
+- [ ] **T11.5 — Prepare Docker delivery.** Depends on merged T11.2; may run
+  alongside T11.3 and T11.4. Add an explicit optional ELT build/run configuration,
+  SQL resource installation, container checks and run-guide preparation.
+  **PR boundary:** Docker/Compose, delivery CI and packaging smoke tests; do not
+  implement pipeline stages. Done when the optional dependency/resources work
+  from an installed package/container and default ETL remains usable without
+  DuckDB. Full ELT execution is verified in T11.6, not claimed here.
+
+- [ ] **T11.6 — Connect and verify.** Depends on merged T11.3, T11.4 and T11.5.
+  Connect the ELT coordinator, manual entry point, Prefect stages and conversion
+  to the shared `RevenueResult`/writer contract. Keep output destinations separate.
+  **PR boundary:** runtime integration, parity/failure checks and final run docs.
+  Done when local Python, installed-package, Docker and Prefect runs pass; both
+  paths match on the same real source bytes and repeat without doubled results.
+  Reconcile every daily value and run counter, audit the changes, and document
+  the extra storage/maintenance cost before release.
+
+- [ ] **T11.7 — Publish the reviewed ELT image.** Depends on merged T11.6, passing
+  release checks and explicit owner approval. Agree an ELT image variant/package
+  and dated tag; do not overwrite the published ETL version or silently move its
+  `latest` tag to ELT. **PR boundary:** a focused workflow/docs PR if release
+  support needs changes; publication itself is a separate manual action after
+  those changes are reviewed and merged. Done when the intended public image
+  can be pulled without login and a fresh non-root run produces checked outputs.
+  Record its digest and run instructions; publishing an image does not deploy a
+  running service.
+
+### Parallel work and PR order
+
+T11.1 → T11.2 → T11.3 / T11.4 / T11.5 in parallel → T11.6 → T11.7.
+
+- Give T11.1–T11.6 one focused PR each. These are task boundaries, not GitHub PR
+  numbers. Keep the ADR review PR separate from implementation.
+- Start each task from updated `main` after its prerequisites merge. T11.3–T11.5
+  use the same foundation, not branches stacked on one another.
+- T11.3 owns loader/raw schema files; T11.4 owns transformation SQL; T11.5 owns
+  container/delivery configuration. Agree shared schema or interface changes
+  before editing them. Avoid concurrent changes to fixtures, `pyproject.toml`
+  or `uv.lock`; designate one owner for a required shared update.
+- Reuse shared fixtures. Each parallel PR must pass its applicable checks and
+  existing ETL regressions without depending on another unmerged implementation.
+- Merge the parallel PRs independently, updating each with `main` as needed.
+  T11.6 then connects and verifies the combined work; do not defer all testing
+  until integration or publish merely because the image builds.
 
 ## Working agreement
 

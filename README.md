@@ -303,6 +303,7 @@ its named volume rather than the host `data/` directory.
 ## Project notes
 
 - [Design decisions](docs/adr/001-pipeline-design.md): scope, data rules and object responsibilities.
+- [ELT proposal](docs/adr/002-elt-comparison.md): a separate database-first comparison, pending approval.
 - [Real-data review](docs/data-review.md): source identities, reconciliation and repeat-run evidence.
 - [Exploration notebook](notebooks/01-explore-green-taxi.ipynb): inspect one staged file without changing it.
 - [Docker and Prefect](docs/docker-prefect.md): configuration, storage and troubleshooting.
