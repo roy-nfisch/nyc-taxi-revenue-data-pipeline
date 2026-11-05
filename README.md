@@ -288,6 +288,6 @@ its named volume rather than the host `data/` directory.
 - [Task list](TASKS.md): reviewed work and planned follow-ups.
 
 The project uses [NYC TLC Green Taxi records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
-The course reference was used during development and is not included in the
-public-release source tree. Historical verification records still mention it.
+This project was developed as part of the neue fische Machine Learning Engineering
+course and is presented as educational portfolio work.
 The original software notice remains in [LICENSE](LICENSE).
