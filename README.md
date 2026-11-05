@@ -3,14 +3,16 @@
 [![CI on main](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/actions/workflows/ci.yml?query=branch%3Amain)
 [![Tests: unit, integration, data](https://img.shields.io/badge/tests-unit%20%7C%20integration%20%7C%20data-blue)](#run-the-checks)
 [![Python 3.13](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)](#run-locally)
-[![Processing: batch ETL](https://img.shields.io/badge/processing-batch%20ETL-blue)](#the-flow)
+[![Processing: batch ETL and ELT](https://img.shields.io/badge/processing-batch%20ETL%20%7C%20ELT-blue)](#the-flow)
 [![Prefect: local orchestration](https://img.shields.io/badge/Prefect-local%20orchestration-blue)](#follow-a-run)
 [![Docker: local](https://img.shields.io/badge/Docker-local-2496ED?logo=docker&logoColor=white)](#run-with-docker-and-prefect)
-[![GHCR: public image](https://img.shields.io/badge/GHCR-public%20image-blue)](https://github.com/users/roy-nfisch/packages/container/package/nyc-taxi-revenue-data-pipeline)
+[![GHCR: public ETL image](https://img.shields.io/badge/GHCR-public%20ETL%20image-blue)](https://github.com/users/roy-nfisch/packages/container/package/nyc-taxi-revenue-data-pipeline)
 
 We built a small, object-oriented Python pipeline that turns NYC Green Taxi
 records into daily revenue reports. Our focus was reliable downloads, clear data
 rules and a report we can rebuild without doubling the results.
+We then added a DuckDB/SQL path to compare **ETL** (transform, then load the
+report) with **ELT** (load raw data, then transform it).
 
 This project began during the neue fische MLE course, which supplied the brief
 and a reference implementation. We built our own pipeline, tests and delivery setup.
@@ -30,6 +32,7 @@ logs and the metadata path, not the presentation table.*
 - Daily revenue in exact cents, with a date dimension and run metadata.
 - Prefect task states, logs and retries around the same Python objects.
 - Automated checks for data rules, failures, reruns and Docker delivery.
+- A separate ELT path, checked against ETL using the same source files.
 
 The ETL pipeline runs without a notebook or database.
 
@@ -57,6 +60,16 @@ cat data/processed/metadata.json
 ```
 
 Omit `--run` to inspect settings without processing data.
+
+To run the ELT comparison instead:
+
+```bash
+uv run --locked --extra elt python -m green_taxi.elt
+```
+
+It reuses `data/raw/`, keeps its warehouse in `data/elt/warehouse.duckdb`, and
+saves reports to `data/elt/processed/`. See the [ELT run guide](docs/elt-runtime.md)
+for Docker and Prefect commands. The published image below is **ETL only**.
 
 ## Run with Docker and Prefect
 
@@ -101,14 +114,15 @@ for verification and Compose instructions.
 
 ### Follow a run
 
-One Prefect flow calls three tasks in order: **download → calculate → save**.
-It reuses the plain Python pipeline's objects and rules.
+ETL uses three sequential tasks: **download → calculate → save**.
+ELT uses four: **download → load raw → transform with SQL → save**.
+Each flow reuses its plain Python pipeline's objects and rules.
 
 <p align="center">
   <a href="docs/assets/prefect-pipeline-run.jpg"><img src="docs/assets/prefect-pipeline-run.jpg" width="850" alt="Completed Prefect run showing download, calculation and report-saving tasks"></a>
 </p>
 
-*An actual local run: bars show timings and arrows show dependencies.*
+*An actual ETL run: bars show timings and arrows show dependencies.*
 
 Runs start manually. Logs show each stage and the final totals; temporary download
 failures get up to three attempts. Prefect is a local run view, not a revenue dashboard.
@@ -138,6 +152,7 @@ Reruns replace reports rather than appending them. Run only one batch per data d
 | Technology | Why we used it here |
 |---|---|
 | Python, pandas and PyArrow | Read monthly Parquet files, apply the data rules and write daily reports. |
+| DuckDB and SQL | Store raw rides and calculate the ELT report, keeping ETL as the comparison baseline. |
 | Requests | Download source files with explicit timeouts and HTTP error handling. |
 | Pydantic | Validate the reporting period, source URL and storage settings before processing. |
 | Prefect | Show stage states, retries and logs while reusing the plain Python pipeline. |
@@ -149,23 +164,12 @@ Reruns replace reports rather than appending them. Run only one batch per data d
 
 ## The flow
 
-```mermaid
-flowchart LR
-    A[NYC Green Taxi files] --> B[Download and stage raw Parquet]
-    B --> C[Validate dates and amounts]
-    C --> D[Group accepted rides by day]
-    D --> E[Save daily facts and date dimension]
-    E --> F[Record counts and source identities]
-```
+![ETL transforms staged taxi files in Python; ELT loads them into DuckDB and transforms with SQL. Both use the shared writer and separate report folders.](docs/assets/etl-elt-flow.svg)
 
-This is **batch ETL**: Python transforms staged files, then saves the results.
-It does not process a continuous stream.
-
-`TaxiPipeline` connects `TaxiDownloader`, `DailyRevenueCalculator` and
-`ReportWriter`, keeping each responsibility separate.
-
-The separate [ELT pipeline](docs/elt-runtime.md) loads raw files into DuckDB
-before running SQL. It produces the same report in its own output directory.
+Both are manual batches, not continuous streams. The diagram shows two choices,
+not branches that automatically run in parallel. Downloading and report writing
+are shared; each path owns its calculation. See the [SQL flow](docs/elt-sql.md)
+for the queries inside ELT.
 
 ## Results and limitations
 
@@ -178,6 +182,9 @@ The January–March 2025 [real-data review](docs/data-review.md) recorded:
 | Excluded rides | 11, outside the reporting period |
 | Daily facts / calendar dates | 90 / 90 |
 | Recorded charges | $3,395,290.56 USD |
+
+ELT matched every daily fact, calendar row and counter on the same reviewed
+source files. Repeated runs produced the same totals without doubling results.
 
 Outputs are `fact_daily_revenue.parquet`, a CSV copy, `dim_date.parquet` and
 `metadata.json`. Daily facts and the date dimension join through `service_date`.
@@ -240,20 +247,21 @@ nyc-taxi-revenue-data-pipeline/
 ├── tests/
 │   ├── green_taxi/                 # Shared component tests and fixtures
 │   │   ├── etl/                    # Mirrors the Python ETL modules
-│   │   └── elt/                    # Optional registry contract checks
-│   ├── packaging/                  # Installed wheel, SQL resource and ETL smoke checks
+│   │   └── elt/                    # Loading, SQL, parity and Prefect checks
+│   ├── packaging/                  # Installed ETL/ELT wheel and SQL checks
 │   └── docker/                     # Image and Compose checks
 ├── notebooks/                      # Optional data exploration
 ├── docs/                           # Design, data review and run guide
-│   └── assets/                     # Terminal GIF and Prefect screenshot
+│   └── assets/                     # Pipeline diagram, terminal GIF and ETL screenshot
 ├── data/                           # Generated locally; ignored by Git
 │   ├── raw/                        # Staged source files
-│   └── processed/                  # Daily facts, date dimension and metadata
+│   ├── processed/                  # ETL facts, date dimension and metadata
+│   └── elt/                        # DuckDB warehouse and separate ELT reports
 ├── .github/workflows/              # Automated checks
 ├── .github/scripts/                # Release-tag safety check
 ├── Dockerfile, compose.yaml        # Application and local Prefect runtime
 ├── compose.config.yaml             # Read-only host JSON override
-├── compose.elt.yaml                # Separate ELT image checks
+├── compose.elt.yaml                # ELT batch, Prefect flow and image checks
 ├── .env.example                    # Optional Compose settings
 └── pyproject.toml, uv.lock         # Package and locked dependencies
 ```
@@ -274,6 +282,7 @@ its named volume rather than the host `data/` directory.
 - [ELT design](docs/adr/002-elt-comparison.md) and [contracts](docs/etl-elt-contract.md): the database-first comparison.
 - [Real-data review](docs/data-review.md): source identities, reconciliation and repeat-run evidence.
 - [Docker and Prefect](docs/docker-prefect.md): configuration, storage and troubleshooting.
+- [Run ELT](docs/elt-runtime.md): database-first commands, storage and costs.
 - [Image publishing](docs/docker-prefect.md#publish-to-ghcr): manual release steps and approval gates.
 
 The project uses [NYC TLC Green Taxi records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).

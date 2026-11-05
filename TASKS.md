@@ -442,6 +442,14 @@ not completed work or permission to publish.
   Record its digest and run instructions; publishing an image does not deploy a
   running service.
 
+- [x] **T11.8 — Explain ETL and ELT on the project landing page.** Documentation
+  implemented; PR review pending. Add a clear pipeline image, keep the existing
+  ETL demo/screenshot accurately labelled, and update commands, technologies,
+  results and the overview tree. Keep the public image identified as ETL-only.
+  This PR depends on the runtime PR and does not authorize image publication.
+  Verified local README links/images, SVG syntax, browser rendering and whitespace.
+  Documentation only; application tests were not rerun for this change.
+
 ### Parallel work and PR order
 
 T11.1 → T11.2 → T11.3 / T11.4 / T11.5 in parallel → T11.6 → T11.7.

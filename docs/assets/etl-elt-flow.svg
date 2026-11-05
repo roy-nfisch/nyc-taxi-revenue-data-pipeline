@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="420" viewBox="0 0 1040 420" role="img" aria-labelledby="title desc">
+  <title id="title">Same taxi files, two ways to build the daily report</title>
+  <desc id="desc">A shared downloader stages unchanged Parquet files. ETL transforms rides in Python. ELT first loads raw rides into DuckDB, then transforms them with SQL. Both use the same report writer, saving to separate ETL and ELT folders.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#536477"/></marker>
+  </defs>
+  <rect width="1040" height="420" rx="16" fill="#f8fafc"/>
+  <g font-family="Arial, Helvetica, sans-serif" fill="#172b40">
+    <text x="28" y="39" font-size="23" font-weight="bold">Same inputs. Two processing paths. Matching daily reports.</text>
+    <g fill="none" stroke="#536477" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M242 202 H265 V117 H286"/>
+      <path d="M242 202 H265 V300 H286"/>
+      <path d="M590 117 H620 V202 H650"/>
+      <path d="M590 300 H620 V235 H650"/>
+    </g>
+    <rect x="24" y="144" width="218" height="120" rx="12" fill="#e7edf4"/>
+    <text x="41" y="174" font-size="19" font-weight="bold">Stage raw files</text>
+    <text x="41" y="203" font-size="17">NYC Green Taxi Parquet</text>
+    <text x="41" y="230" font-size="16">Shared downloader + checks</text>
+    <text x="41" y="251" font-size="16">data/raw/</text>
+    <rect x="288" y="69" width="302" height="104" rx="12" fill="#e2edff"/>
+    <text x="306" y="100" font-size="20" font-weight="bold">ETL · transform in Python</text>
+    <text x="306" y="131" font-size="17">pandas: validate rides</text>
+    <text x="306" y="155" font-size="17">and sum charges by day</text>
+    <rect x="288" y="235" width="302" height="130" rx="12" fill="#ddf3eb"/>
+    <text x="306" y="266" font-size="20" font-weight="bold">ELT · load, then transform</text>
+    <text x="306" y="297" font-size="17">DuckDB: store raw rides</text>
+    <text x="306" y="323" font-size="17">SQL: validate rides</text>
+    <text x="306" y="347" font-size="17">and sum charges by day</text>
+    <rect x="652" y="132" width="362" height="158" rx="12" fill="#e7edf4"/>
+    <text x="672" y="163" font-size="20" font-weight="bold">Shared checked report writer</text>
+    <text x="672" y="193" font-size="17">Daily facts + date dimension + metadata</text>
+    <text x="672" y="226" font-size="17">ETL → data/processed/</text>
+    <text x="672" y="255" font-size="17">ELT → data/elt/processed/</text>
+    <text x="28" y="398" font-size="16">Manual batches · same data rules · exact cents · reruns replace reports rather than append</text>
+  </g>
+</svg>
