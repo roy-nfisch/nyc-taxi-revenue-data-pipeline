@@ -21,7 +21,7 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   pipeline or passing application tests. No application code or staged data was created.
 
 - [x] **T02 — Create the Python foundation.** Reviewed and merged in
-  [PR #2](https://github.com/roy-nfisch/mle-data-pipeline-project/pull/2).
+  [PR #2](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/pull/2).
   Includes immutable Pydantic settings, JSON month selection, explicit file loading,
   application logging, installable packaging, mirrored tests, and feature-branch/PR
   CI. Expanded docstrings explain inputs, outputs, errors, and side effects.
@@ -29,7 +29,7 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   and package build. Configuration does not start downloads or Prefect.
 
 - [x] **T03 — Download and stage the files.** Reviewed and merged in
-  [PR #3](https://github.com/roy-nfisch/mle-data-pipeline-project/pull/3).
+  [PR #3](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/pull/3).
   `TaxiDownloader` uses shared JSON months/source URL, validates
   complete Parquet before reuse/publication, preserves old files on failed
   refreshes, and returns input identities for lineage. Safe failure logs and shared
@@ -42,7 +42,7 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   No revenue outputs have been created.
 
 - [x] **T04 — Build the daily calculation.** Reviewed and merged in
-  [PR #4](https://github.com/roy-nfisch/mle-data-pipeline-project/pull/4).
+  [PR #4](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/pull/4).
   Apply only approved data rules and
   aggregate `fact_daily_revenue` by pickup day. Generate `dim_date` with a small
   pure helper, not a separate service. Done when small known examples cover
@@ -71,7 +71,7 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
     separately. A missing fact does not become an invented zero-revenue day.
 
 - [x] **T05 — Save the report and connect the command.** Reviewed and merged in
-  [PR #5](https://github.com/roy-nfisch/mle-data-pipeline-project/pull/5).
+  [PR #5](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/pull/5).
   Compose the objects into
   one local entry point. Done when a temporary-file integration test checks the
   saved fact/date schemas, values, and repeat-run behaviour, including explicit
@@ -90,7 +90,7 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   or dependencies; existing objects keep their responsibilities.
 
 - [x] **T06 — Run the real data and review the result.** Reviewed and merged in
-  [PR #6](https://github.com/roy-nfisch/mle-data-pipeline-project/pull/6).
+  [PR #6](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/pull/6).
   Process all three files;
   account for included/excluded rows and reconcile report totals with accepted rides.
   Check the saved date dimension and matching daily facts too. Done when outputs
@@ -111,27 +111,28 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   The review includes a repeatable independent calculation and a rebuild check;
   the documented commands were rerun against the staged real data.
 
-## In progress — required orchestration and container delivery
+## Done — required orchestration and container delivery
 
-Work order: **T08 and T09 → T07 → T10**. Task numbers stay unchanged.
+T08 and T09 were reviewed and merged in
+[PR #7](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/pull/7) on 05.11.2026.
 
-- [ ] **T08 — Prefect orchestration.** Use the shared components in extract,
+- [x] **T08 — Prefect orchestration.** Use the shared components in extract,
   transform, and load tasks. Add bounded retries for transient failures, not bad
   data. Done when a container-run flow is visible in the local Prefect UI, failures
   and safe retries are tested, and the plain Python command still works. No copied
   transformation logic. Start runs manually; no automatic schedule initially.
   Demonstrate a manual run, rebuild, and simulated transient-failure recovery.
   Prefect is the planned tool; an alternative needs review.
-  Implemented for review: three sequential tasks call shared stage objects and
+  Delivered: three sequential tasks call shared stage objects and
   shared lineage/publication code. Download retries are limited to transient
   network/HTTP failures; real Prefect tests cover recovery, exhaustion, and corrupt
   data without retries. No schedule or result persistence is added.
-- [ ] **T09 — Docker and Compose.** Package the shared command and Prefect flow;
+- [x] **T09 — Docker and Compose.** Package the shared command and Prefect flow;
   run local Prefect services with persistent state and raw/report storage. Check
   occupied ports before starting. Done when a fresh Compose run produces the same
   checked report, a rerun does not duplicate results, and run/inspect/stop commands
   are verified. No public hosting or image publication without separate approval.
-  Implemented for review: non-root image, loopback UI on checked port 4205,
+  Delivered: non-root image, loopback UI on checked port 4205,
   explicit project network, and separate persistent data/history volumes. Real
   container flow and plain-container command both processed the agreed period.
   CI adds an Ubuntu 24.04 Docker job with tiny synthetic inputs; native Python
@@ -144,16 +145,15 @@ Work order: **T08 and T09 → T07 → T10**. Task numbers stay unchanged.
   Pipeline values stay in JSON; Python has no dotenv loader. Tests cover automatic
   `.env` loading, shell precedence, and packaged defaults without the override.
 
-T08 and T09 can be developed together now that the local pipeline is verified.
-Both must pass before we resume T07 so its documentation covers the actual
-Docker and Prefect commands, not a planned setup.
+T08 and T09 are complete. Continue with **T07 → T10b → T10 → T10a**;
+the optional ELT comparison remains separate.
 
 Prior verification, before the latest follow-up: 215 native application tests passed (13 opt-in Docker tests
 skipped there), all 13 Docker smoke/contract tests passed when enabled, and three reference
 tests, lint/format, package/image builds, and Compose configuration passed. Real
 container facts/calendar matched the reviewed host tables; a rebuild reused
 inputs and preserved 146,475 rides / $3,395,290.56. Down/up preserved run history
-and data. Both tasks remain awaiting review.
+and data. Both tasks are now reviewed and merged.
 
 Review follow-up: limit retryable server responses to HTTP 500–599; validate all
 Compose profiles in CI. Added full-flow failure propagation, CLI option forwarding,
@@ -171,14 +171,14 @@ these cases passed in GitHub CI for commit `9915519`.
 The save task now logs the saved report's period, ride/day counts, and total in
 Prefect after successful publication, without repeating the calculation.
 CI verified on 05.11.2026: the push run
-[42025803602](https://github.com/roy-nfisch/mle-data-pipeline-project/actions/runs/42025803602)
+[42025803602](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/actions/runs/42025803602)
 passed lint/format, reference tests, package build, unit/integration tests, and
-Docker checks. In the separate PR run, checks, unit tests, and Docker checks have
-passed; integration tests were still pending at this review.
+Docker checks. The final PR checks also all passed for commit `dc521ed`: see
+[run 42031170377](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/actions/runs/42031170377).
 Audit follow-up adds custom-config refresh instructions, updates stale container
 and layout descriptions, and removes explicit months from the Compose end-to-end
-fixture so it exercises automatic period selection. These latest edits have not
-been tested; the next CI run must verify them before merge.
+fixture so it exercises automatic period selection. These changes are covered
+by the successful final PR checks.
 Enforced single-writer locking, digest/signed provenance, and measured image-size
 optimization remain future hardening, not extra requirements for this local demo.
 
@@ -186,17 +186,35 @@ Simplification after manual review: the optional Compose config override now
 mounts the existing `src/green_taxi/defaults.json` by default. No local directory,
 config copy, or `.env` is required. `TAXI_CONFIG_FILE` remains an optional override;
 missing files still fail and all config mounts remain read-only. Updated fallback
-and dotenv contract checks have not been run locally.
+and dotenv contract checks passed in the final Docker CI job.
 
-## After Docker and Prefect
+## In progress — project documentation
 
-- [ ] **T07 — Prepare the portfolio and closeout documentation.** Postponed until
+- [ ] **T07 — Prepare the portfolio and closeout documentation.** In progress.
   T08 and T09 are verified. Update the README with the actual file tree, working
   commands, a small output example, and course reflections. Explain why this is
   batch ETL, how to manually launch/rebuild the reporting period, and how to
   deliberately refresh inputs and trace them through metadata. Done when another
   person can follow the instructions and we have reviewed scope, tests, source
   attribution, and generated files excluded from Git. Final public release is T10.
+  Started: README now opens with local/Docker run options, where reports live,
+  metadata inspection, safe reruns, and a short learning summary. Removed the
+  unnecessary `.env` setup from the normal Docker instructions. Existing ADR,
+  data review, and Docker guide remain the detailed references. Documentation
+  review completed against T07: shortened the demo result, removed duplicated
+  setup/run instructions and stale timing figures, and clarified data rules,
+  configuration, storage, and source tracing. Static link/structure and whitespace
+  checks completed; no tests or pipeline runs were started for this task. Owner
+  review and a new-reader walkthrough remain before marking the task done.
+  Portfolio pass adds a real completed Prefect-run screenshot and explains
+  sequential tasks, bounded retries, and result logs. Setup commands are
+  collapsible so the landing page leads with the project and working evidence.
+  Independent README review (GPT-6 Astra) confirmed the reported result against
+  the data review and recommended a linked area map, less repetition, and folded
+  operational details. Owner subsequently requested the King County style:
+  rewrote the README with visible run commands, technology reasons, results and
+  limitations, a compact annotated tree, and linked project notes. Kept the
+  terminal demo and actual Prefect screenshot. No tests or runtime checks were run.
 
 ## Final review and public release
 
@@ -205,9 +223,9 @@ and dotenv contract checks have not been run locally.
   - Audit code, data rules, security, tests, and documentation. Keep OOD simple;
     fix confirmed findings and rerun the checks. Include an independent review
     with a different model and record any remaining limitations.
-  - Choose a clear project name with the owner, rename the GitHub repository,
-    and update local remotes, links, badges, workflows, and Docker/Prefect
-    references where affected. Verify commands still work after the rename.
+  - Naming decision completed during T07: the owner renamed the repository to
+    `nyc-taxi-revenue-data-pipeline`; local remote, links, and package metadata
+    are updated. Verify run commands after the rename during final checks.
   - Check tracked files and Git history for secrets or private information;
     review licensing, attribution, and data redistribution. Remove the supplied
     reference before public release, as planned; keep raw/generated data ignored.
@@ -220,6 +238,44 @@ and dotenv contract checks have not been run locally.
     its detailed documentation.
   Done when findings are resolved or clearly documented, the renamed public
   repository works for a new visitor, and the portfolio decision is recorded.
+
+- [ ] **T10a — Publish the reviewed Docker image to GHCR.** After T10 is complete
+  and its changes are merged, follow the King County release approach in a
+  separate PR:
+  - Add a manual GitHub Actions publishing workflow that builds from `main`
+    only after the required checks pass. Use `GITHUB_TOKEN` with the minimum
+    permissions needed; do not require a personal token.
+  - Use the approved repository name for the GHCR package. Tag releases as
+    `year.month.day`, adding a numeric suffix for another release that day
+    (for example `2026.11.05.1`), and update `latest`. Do not overwrite an
+    existing dated release tag.
+  - Package code and dependencies only. Exclude raw taxi data, reports, local
+    configuration, credentials, caches, and the supplied reference solution.
+  - Publish only after owner approval. Make the package public and verify that
+    a new user can pull it without logging in. Check the published image, not
+    just the locally built one, using fresh storage and the non-root user.
+  - Document the versioned image link, supported platforms, pull/run commands,
+    Compose image usage, configuration, and where results are stored. Keep local
+    builds available and explain the difference between image defaults and
+    read-only host configuration.
+  Done when the approved release and `latest` refer to the verified image,
+  anonymous pull and a fresh pipeline run succeed, and the README instructions
+  work. Publishing distributes the image; it does not deploy the pipeline or
+  expose Prefect publicly. This task does not block completion of T10.
+
+- [ ] **T10b — Add a small data exploration notebook.** Show the coach's
+  exploration step in `notebooks/`, without moving pipeline logic out of `src/`:
+  - Read one existing staged Green Taxi file; do not download or modify raw data.
+    Explain how to stage the file first if it is missing.
+  - Inspect pickup timestamps and `total_amount`: types, missing values, date
+    and amount ranges, negative/zero amounts, and out-of-period pickups.
+  - Explain how the observations support the approved cleaning rules. Link to
+    the ADR and real-data review instead of duplicating their full explanations.
+  - Keep the notebook short and exploratory, with simple tables and wording.
+    The production pipeline must continue to run without it.
+  Done when it runs top to bottom on a staged file and its conclusions match
+  the observed data. Clear outputs, execution counts, and unnecessary metadata
+  before committing; link it from the README. No new pipeline features required.
 
 ## Optional follow-up — not a release requirement
 

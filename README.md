@@ -1,397 +1,288 @@
-# Green Taxi Daily Revenue Pipeline
+# NYC Taxi Revenue Data Pipeline
 
-We are building a small, object-oriented Python **batch ETL pipeline** that turns NYC Green
-Taxi rides into a daily revenue report. The focus is reliable downloads, clear
-data rules, useful tests, and a process someone else can run.
+[![CI on main](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/actions/workflows/ci.yml?query=branch%3Amain)
 
-**Status: the local batch command downloads, calculates, and saves checked reports.**
-The [local real-data review](docs/data-review.md) reconciles 146,475 accepted rides
-and $3,395,290.56 in recorded charges across 90 days. Docker and Prefect execution
-are implemented for local review. The accepted
-data rules, simple OOD plan, and fact/date layout are in
-[ADR 001](docs/adr/001-pipeline-design.md). Docker and Prefect are required.
-Follow our progress in [TASKS.md](TASKS.md).
+We built a small, object-oriented Python pipeline that turns NYC Green Taxi
+records into daily revenue reports. Our focus was reliable downloads, clear data
+rules and a report we can rebuild without doubling the results.
 
-## See it run
+This portfolio project was developed during the neue fische MLE course. The
+course supplied the brief and a reference implementation. We built our own
+pipeline, validation, tests and Docker/Prefect setup around the public taxi data.
 
-The terminal demo shows the batch results: accepted/excluded ride counts,
-daily revenue, and saved files. Select the animation to open it separately.
+[Run locally](#run-locally) · [Run with Docker](#run-with-docker-and-prefect) · [Technology choices](#technologies-and-why-we-used-them) · [Tests](#run-the-checks)
 
 <p align="center">
-  <a href="docs/assets/pipeline-demo.gif"><img src="docs/assets/pipeline-demo.gif" width="620" alt="Taxi pipeline run showing accepted rides, daily revenue, and saved reports"></a>
+  <a href="docs/assets/pipeline-demo.gif"><img src="docs/assets/pipeline-demo.gif" width="620" alt="Taxi pipeline demo showing accepted rides, daily revenue and saved reports"></a>
 </p>
 
-Compressed GIF, about 55 KB. The terminal title, prompt, local paths, and scrollbar are cropped.
-The recording used a temporary summary script; the supported batch command is:
+*The recording uses a temporary summary script. The supported commands below
+print application logs and the metadata path, not the extra presentation table.*
+
+## What we built
+
+- **Checked downloads:** stage the January–March 2025 files, validate them before
+  reuse and keep existing files if a refresh fails.
+- **Daily reports:** apply the agreed rules, sum recorded charges in exact cents
+  and save daily facts, a date dimension and run metadata.
+- **Visible runs:** Prefect coordinates the same Python objects, showing task
+  states and logs with bounded retries for temporary download failures.
+- **Tested delivery:** unit, integration and data checks cover calculations,
+  failures and reruns. Docker packages the application and local Prefect server.
+
+The pipeline runs without a notebook or database. Exploration is separate from
+the production code. See the [design decisions](docs/adr/001-pipeline-design.md)
+for the data rules and object responsibilities.
+
+## Run locally
+
+Use Python 3.13.17 or a newer 3.13 patch and
+[uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13.5 or newer.
+From a fresh clone:
 
 ```bash
+git clone https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline.git
+cd nyc-taxi-revenue-data-pipeline
+uv sync --locked
 uv run --locked python -m green_taxi --run
 ```
 
-<details>
-<summary>Example run output</summary>
+The first run downloads the public files and needs internet access. Later runs
+reuse checked files in `data/raw/` and rebuild the reports in `data/processed/`.
+No local configuration file or API key is needed.
 
-From the recorded demo, including the temporary script's printed summary.
-The standard command prints the logs and metadata path; it does not print the
-extra summary/table below. Local paths are shortened and run IDs replaced with
-`<run-id>` here. Each run gets a new ID, and paths depend on the chosen storage.
-
-```text
-INFO green_taxi.pipeline: Starting run <run-id>
-INFO green_taxi.download: Starting reuse for green_tripdata_2025-01.parquet
-INFO green_taxi.download: Reused green_tripdata_2025-01.parquet (1178451 bytes)
-INFO green_taxi.download: Starting reuse for green_tripdata_2025-02.parquet
-INFO green_taxi.download: Reused green_tripdata_2025-02.parquet (1117474 bytes)
-INFO green_taxi.download: Starting reuse for green_tripdata_2025-03.parquet
-INFO green_taxi.download: Reused green_tripdata_2025-03.parquet (1253510 bytes)
-INFO green_taxi.revenue: Read green_tripdata_2025-01.parquet (48326 rows)
-INFO green_taxi.revenue: Read green_tripdata_2025-02.parquet (46621 rows)
-INFO green_taxi.revenue: Read green_tripdata_2025-03.parquet (51539 rows)
-INFO green_taxi.revenue: Accepted 146475 of 146486 rows
-INFO green_taxi.report: Saved checked report: data/processed/metadata.json
-INFO green_taxi.pipeline: Completed run <run-id>
-data/processed/metadata.json
-
-===== PIPELINE COMPLETED =====
-Rides read:       146,486
-Rides accepted:   146,475
-Rides excluded:   11
-Days reported:    90
-Recorded charges: $3,395,290.56 USD
-
-===== FIRST 10 DAYS =====
-service_date  trip_count daily_revenue
-  2025-01-01        1001      25076.51
-  2025-01-02        1516      34256.83
-  2025-01-03        1525      36517.69
-  2025-01-04        1249      27869.20
-  2025-01-05        1129      25823.69
-  2025-01-06        1541      34049.13
-  2025-01-07        1648      36844.24
-  2025-01-08        1680      37905.12
-  2025-01-09        1868      42532.87
-  2025-01-10        1633      37417.57
-
-===== FILES SAVED =====
-  fact_daily_revenue.parquet
-  fact_daily_revenue.csv
-  dim_date.parquet
-  metadata.json
-```
-
-</details>
-
-## What we want to demonstrate
-
-Build a small taxi-data pipeline and test what happens when files are incomplete,
-records are invalid, and processing runs again.
-
-- Download January–March 2025 [NYC Green Taxi records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)
-  and keep the original Parquet files.
-- Apply agreed data rules and produce daily revenue facts with a date dimension.
-- Run the shared Python objects through Prefect inside Docker.
-- Check calculations, failure handling, and repeat runs with automated tests.
-
-See TASKS.md for reviewed milestones and work awaiting approval.
-
-## Batch flow
-
-```mermaid
-flowchart LR
-    A[Download three monthly files] --> B[Keep raw Parquet files]
-    B --> C[Validate and apply agreed data rules]
-    C --> D[Group rides by pickup day]
-    D --> E[Save daily facts and the date dimension]
-```
-
-The input has **one row per ride**; the fact table will have **one row per pickup
-day with accepted records**. This uses ETL: Python transforms the staged files before loading the
-finished report into output files. A database is not needed. It is **batch
-processing** because each run handles a fixed set of monthly files and finishes;
-it does not continuously process arriving events.
-
-Start runs manually through Prefect in Docker, with no automatic
-schedule initially. Rebuilding with the same inputs and rules must reproduce
-the reporting tables without doubling the results.
-
-## Reporting tables
-
-| Table | What it contains | Saved as |
-|---|---|---|
-| `fact_daily_revenue` | Pickup date, accepted ride count, and recorded total amount in USD, excluding cash tips | Parquet and CSV |
-| `dim_date` | All 90 calendar dates in January–March 2025, with year, month, and day of month | Parquet |
-
-The tables connect through `service_date`. Facts hold the measurements; the
-dimension describes the day. Calendar dates without facts do not become invented
-zero-revenue days. See the [layout and diagram](docs/adr/001-pipeline-design.md#fact-and-dimension-layout)
-for fields and checks. Run metadata records which exact inputs, period,
-and code version produced the outputs, alongside included/excluded counts.
-See [run history and rebuilds](docs/adr/001-pipeline-design.md#run-history-and-rebuilds)
-for the agreed lineage fields and launch behaviour.
-
-## Technology choices
-
-| Technology | Why we use it |
-|---|---|
-| Python, pandas, and PyArrow | Read Parquet and calculate daily totals using tools already in the project. |
-| Requests | Download source files with explicit timeouts and HTTP error handling. |
-| Pydantic | Validate run settings, such as months and paths; table checks stay in pandas. |
-| pytest and GitHub Actions | Check calculations and a small end-to-end run without downloading the full dataset in CI. |
-| uv | Reuse the project's environment and lock file. |
-| Prefect — required | Coordinate downloading, calculation, and saving with visible task states and bounded retries for transient failures. |
-| Docker and Compose — required | Run the pipeline and local Prefect services with configured paths, persistent data, and checked ports. |
-
-No ML model, API, dashboard, dbt, streaming broker, or cloud deployment is planned.
-Docker, Prefect, and automated checks are part of our deliverable. Local and
-container execution share the same Python objects.
-
-## Repository map
-
-```text
-src/green_taxi/       Shared pipeline objects, JSON defaults, CLI, and Prefect flow
-tests/green_taxi/     Mirrored unit/integration tests and shared fixtures
-tests/docker/        Opt-in image and Compose contract checks
-docs/                Design decisions, data review, Docker/Prefect guide, and demo
-data/                Local raw files, reports, and original demo media — ignored
-config/local/        Optional local JSON configurations — ignored
-Dockerfile           Non-root image for the batch and local Prefect server
-compose.yaml         Project network, persistent volumes, and manual run services
-compose.config.yaml  Read current defaults.json without rebuilding; optional custom path
-.env.example         Template for local Compose settings; copy to ignored .env
-.dockerignore        Files excluded from the image build context
-.github/workflows/   Automated checks
-solution/            Supplied reference; remove before public release
-README.md            Project overview and run instructions
-TASKS.md             Progress and completion checks
-pyproject.toml       Package, dependencies, and tool configuration
-uv.lock              Locked dependency versions
-LICENSE              Project license and attribution
-```
-
-`TaxiPipeline` connects the downloader, calculator, and `ReportWriter`; each keeps
-its own responsibility. The Prefect flow reuses these objects and the same
-lineage/publication methods; it does not copy the calculation rules.
-
-## Setup
-
-Use [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13.5 or newer
-and Python 3.13.17 or a newer 3.13 patch release, as defined in
-[`.python-version`](.python-version).
-
-### Prepare the environment
-
-This installs all dependencies and creates a virtual environment in `.venv/`.
+Read the result:
 
 ```bash
-git clone https://github.com/roy-nfisch/mle-data-pipeline-project.git
-cd mle-data-pipeline-project
-uv sync --locked
+cat data/processed/metadata.json
 ```
 
-Inspect validated settings without starting downloads or services:
+To inspect settings without starting the pipeline, omit `--run`. To download
+files without calculating a report, use `uv run --locked python -m green_taxi.download`.
+
+## Run with Docker and Prefect
+
+With Docker and Compose available, use the same checkout:
 
 ```bash
-uv run --locked python -m green_taxi
-uv run --locked pytest
-uv run --locked ruff check src tests
-uv run --locked ruff format --check src tests
-uv build
-```
-
-The command reads [defaults.json](src/green_taxi/defaults.json), validates it, and
-prints the resulting settings. The default period is defined only in that file;
-the source months are generated from it. Month validation checks real
-`YYYY-MM` values and uniqueness. The default project still covers Jan–Mar 2025.
-
-To load your own JSON file, use `--config path/to/run.json`. Normally it contains
-`reporting_period`, which also generates the source-month list. It can set `source_url`, `data_dir`,
-`timeout_seconds`, and `log_level`. This is a local file, not a web upload.
-Invalid/missing files fail instead of falling back.
-An optional explicit `months` list overrides source selection only. Use it only
-when deliberately reading different files, such as extra months for late records.
-
-### Reporting months
-
-We configure the first month and how many **whole calendar months** to include.
-`ReportingPeriod` validates these values and derives the start/end dates; we do
-not maintain a second editable end date.
-
-```json
-{
-  "reporting_period": {
-    "start_month": "2025-01",
-    "duration_months": 3
-  }
-}
-```
-
-The example downloads January, February, and March and reports pickups from
-01.01.2025 up to, but not including, 01.04.2025. Edit the period once; you do not
-need to maintain a second month list. CLI settings inspection shows the derived list.
-
-| `duration_months` | Meaning |
-|---|---|
-| `1` | The whole starting month, not the current month or thirty days |
-| `3` | The starting month and the following two months |
-| `0` or a negative number | Invalid; no special “until today” meaning |
-| `"3"`, `3.0`, `true`, or `null` | Invalid; only positive integers pass |
-
-Invalid month formats, missing fields, extra boundary fields, and dates beyond
-the supported calendar also fail before processing starts. The range does not
-depend on today's date. Source filenames normally follow the period, but the
-pickup date still determines whether a ride belongs in the report. This does not
-guarantee that the selected files contain every ride recorded elsewhere.
-
-Click translates terminal options into arguments to our Python function. It does
-not run GitHub Actions or orchestrate tasks. Python/Prefect callers can bypass it:
-
-```python
-from green_taxi.settings import PipelineSettings
-
-settings = PipelineSettings.from_file()  # Packaged JSON defaults
-```
-
-In Docker, `--data-dir /data` overrides JSON storage with the mounted data volume.
-Configuration does not create directories. Tests use temporary paths, not our
-real dataset. CI also checks the supplied reference tests separately.
-
-### Test categories and parallel checks
-
-**Fixtures prepare things; markers classify tests.** Shared fixtures provide
-synthetic months, filenames, Parquet bytes, HTTP responses, and isolated log capture.
-They do not use the real downloaded data or live internet.
-
-| Marker | What it covers |
-|---|---|
-| `unit` | Settings validation, logging, money/date rules, and calendar generation in isolation |
-| `integration` | File loading, CLI behaviour, imports, downloads, and calculation across real tiny Parquet files |
-| `data` | Additional label for file structure, calculation rules, and output-table checks; not a duplicate CI run |
-
-Every project test must have exactly one unit/integration marker. Test folders
-still mirror the source. Intentional invalid/boundary dates remain explicit test
-cases; repeated valid downloader setup lives in fixtures instead of each test.
-
-```bash
-uv run --locked pytest -m unit
-uv run --locked pytest -m integration -n 2 --dist loadfile
-uv run --locked pytest -m data
-uv run --locked pytest -n 2 --dist loadfile
-```
-
-CI runs unit and integration jobs concurrently after lint/build/reference checks.
-Integration uses two workers grouped by file; unit tests are serial within their
-job to avoid worker-startup overhead. Reference tests run once in the checks job.
-A three-run local comparison measured integration wall time around 0.96 seconds
-serial and 0.93 seconds with two workers: effectively similar at this small size,
-not evidence of a substantial speedup. These are local measurements, not CI promises.
-
-### Docker and Prefect
-
-From your Mac/host terminal at the repository root (edit an existing `.env`
-instead of overwriting it):
-
-```bash
-cp .env.example .env
 docker compose up --build -d --wait prefect
 docker compose run --rm flow
 ```
 
-Open **http://127.0.0.1:4205** to see completed flow/task runs. Container data lives
-in named volumes, separate from host `./data`. Plain Python also runs in the image:
-`docker compose run --rm --no-deps pipeline`. Run one batch at a time.
+Check that host port **4205** is free first. Open
+[local Prefect](http://127.0.0.1:4205), select a run and inspect its tasks or logs.
+No `.env` setup is required.
 
-See [Docker and Prefect](docs/docker-prefect.md) for ports, retries, storage,
-inspection, tests, and safe stop/restart commands.
-Packaged JSON defaults remain available; use the documented
-[optional config override](docs/docker-prefect.md#custom-json-configuration-optional)
-to read the existing `src/green_taxi/defaults.json` read-only without rebuilding
-the image. No new directory or config copy is required.
-Compose settings belong in `.env`; pipeline settings stay in JSON. No Python
-dotenv loader is used. The `.env` template does not enable custom JSON by itself.
-
-### Download the raw files
-
-From the repository root:
+Docker keeps raw files and reports in a named volume, **not** the host's
+`data/` folder. Read the saved metadata from that volume:
 
 ```bash
-uv run --locked python -m green_taxi.download
+docker compose run --rm --no-deps pipeline python -c \
+  "from pathlib import Path; print(Path('/data/processed/metadata.json').read_text())"
 ```
 
-This downloads January–March 2025 to ignored `data/raw/`. Run it again to reuse
-validated files. To choose other months, put the selection in a local JSON file,
-for example `{"reporting_period": {"start_month": "2025-01", "duration_months": 1}}`
-in ignored `config/local/run.json` (create
-the directory first), then run:
+The plain batch also runs in the image with
+`docker compose run --rm --no-deps pipeline`, without Prefect.
+Stop the server with `docker compose down`; reports and run history are retained.
+
+### Follow a run
+
+One Prefect flow calls three tasks in order: **download → calculate → save**.
+The tasks reuse the existing Python objects; they do not introduce a second
+implementation of the data rules.
+
+<p align="center">
+  <a href="docs/assets/prefect-pipeline-run.jpg"><img src="docs/assets/prefect-pipeline-run.jpg" width="850" alt="Completed Prefect run showing download, calculation and report-saving tasks"></a>
+</p>
+
+*An actual local run. Bars show timings and arrows show dependencies.
+The stages run sequentially; this is not a performance benchmark.*
+
+- Task states and logs show which stage succeeded or failed.
+- Downloads get at most three attempts for transient network errors, HTTP 429
+  or HTTP 5xx. Invalid data is not retried.
+- After saving, the final task logs the period, accepted rides, days and total.
+
+Runs start manually; there is no automatic schedule. Prefect is a local
+operations view, not a revenue dashboard or public service.
+The [Docker and Prefect guide](docs/docker-prefect.md) covers port changes,
+configuration, retries, storage and troubleshooting.
+
+### Change the reporting period
+
+Edit `reporting_period` in [defaults.json](src/green_taxi/defaults.json), keeping
+the other settings. For example, `start_month: "2025-03"` with
+`duration_months: 3` selects March–May. Duration must be a positive integer;
+the source-month list and end date are generated automatically.
+
+Local Python reads the edited file on the next run. To make Docker read it
+without rebuilding the image:
 
 ```bash
-uv run --locked python -m green_taxi.download --config config/local/run.json --data-dir ./data
+docker compose -f compose.yaml -f compose.config.yaml run --rm flow
 ```
 
-The same settings loader validates both commands; there is no separate hardcoded
-month list in the downloader. `--data-dir` overrides JSON storage when supplied.
-The public dataset directory comes from `source_url` in `defaults.json`, not a
-Python URL constant. A custom JSON file can override it with a trusted HTTPS
-directory without credentials/query/fragment. No .env file is required; never put
-secrets in committed JSON. Syntax validation does not make an arbitrary endpoint safe.
-Use `--force` to deliberately refresh selected files. Downloads use temporary
-files, read every Parquet batch, require the pickup/amount columns and at least
-one row, then replace the staged file. Failed refreshes keep the previous file.
-A corrupt existing file stops the run; use `--force` to repair it. Already completed
-months survive a later month's failure and can be reused on retry.
+Without the override, Docker uses the defaults included when the image was
+built. The override mounts the existing file read-only: no directory or config
+copy is needed. Save your changes, then run the command again.
 
-The `TaxiDownloader` returns `StagedFile` records containing source URLs, filenames,
-sizes, checksums, and whether each file was downloaded or reused. The command
-prints sizes/checksums; saving run metadata belongs to the report-writing stage.
-Checksums identify content, not trusted fares. This download-only command does
-not apply the calculator's row-level rules.
-Use one writer per data directory; concurrent publication is not supported.
-Logs identify the selected file, download/reuse start, successful size, and failures.
-Network failures include exception type, available HTTP status, timeout, and retry
-advice. Raw exception text and source URLs are not logged. Errors still propagate;
-logging does not retry automatically or hide a failed run.
+Edits to the shared defaults appear in Git; retain the agreed January–March
+baseline when submitting changes. See the [configuration guide](docs/docker-prefect.md#custom-json-configuration-optional)
+for a separate local JSON file.
 
-### Run the complete batch
+### Rebuild or refresh
+
+Run the same batch command again to rebuild from checked raw files. Reports are
+replaced, not appended. To deliberately refresh downloads in a local Python run:
 
 ```bash
-uv run --locked python -m green_taxi --run
-# Optional custom configuration or container storage:
-uv run --locked python -m green_taxi --run --config config/local/run.json --data-dir ./data
+uv run --locked python -m green_taxi --run --force
 ```
 
-Without `--run`, the command still only prints validated settings. Add `--force`
-with `--run` to deliberately refresh downloads. Otherwise, reruns reuse checked
-raw files and rebuild the reports without appending or doubling totals.
+Use only one batch per data directory at a time. Docker refresh commands,
+including the mounted-config version, are in the [Docker guide](docs/docker-prefect.md).
 
-The command prints the saved `metadata.json` path. In ignored `data/processed/`:
+## Technologies and why we used them
 
-| File | What it contains |
+We kept the stack focused on small Python objects and a pipeline someone else
+can run:
+
+| Technology | Why we used it here |
 |---|---|
-| `fact_daily_revenue.parquet` | One row per accepted pickup day, with exact decimal revenue and ride count |
-| `fact_daily_revenue.csv` | A readable copy of those facts |
-| `dim_date.parquet` | Every calendar day in the reporting period |
-| `metadata.json` | Run ID, UTC times, resolved period, input URLs/sizes/SHA-256, code revision/dirty status, totals, and output row counts |
+| Python, pandas and PyArrow | Read monthly Parquet files, apply the data rules and write daily reports. |
+| Requests | Download source files with explicit timeouts and HTTP error handling. |
+| Pydantic | Validate the reporting period, source URL and storage settings before processing. |
+| Prefect | Show stage states, retries and logs while reusing the plain Python pipeline. |
+| Docker and Compose | Package the runtime and keep data and Prefect history in persistent volumes. The container runs as a non-root user. |
+| pytest and pytest-xdist | Check individual rules, component integration and reruns using small synthetic files. |
+| Ruff | Keep formatting consistent and catch common Python mistakes. |
+| uv | Install locked dependencies for local work, containers and CI. |
+| GitHub Actions | Run quality, unit, integration and Docker checks on changes. |
 
-Code identity uses Git in a checkout or an optional image build stamp. It stays
-explicitly `unknown` when neither is available; see the container guide. The finish
-timestamp is captured after staging the tables, just before publication. Run IDs,
-times, and download/reuse flags may differ between otherwise equivalent rebuilds.
+## The flow
 
-The writer checks schemas, dates, integer counts, decimal money, and the date join.
-It reads staged Parquet/CSV files back and compares exact values before replacing
-any previous outputs, then publishes metadata last. A staging
-failure preserves the previous report. A failure during replacement may leave
-mixed table versions, but removes success metadata: do not use that bundle; fix
-the failure and rerun. This is not a multi-file transaction. Run only one process
-per data directory. A report left after an earlier-stage failure describes its
-previous run, not the failed attempt. Errors exit unsuccessfully.
+```mermaid
+flowchart LR
+    A[NYC Green Taxi files] --> B[Download and stage raw Parquet]
+    B --> C[Validate dates and amounts]
+    C --> D[Group accepted rides by day]
+    D --> E[Save daily facts and date dimension]
+    E --> F[Record counts and source identities]
+```
 
-Tests use tiny temporary inputs and fake HTTP responses. The separate
-[real-data review](docs/data-review.md) records the full-data reconciliation and
-fresh-environment rebuild; those results are not established by synthetic tests.
+This is **batch ETL**: Python transforms a fixed set of staged files before
+loading the results into output files. Each run finishes; it does not process a
+continuous event stream.
 
-## Acknowledgements
+`TaxiPipeline` connects `TaxiDownloader`, `DailyRevenueCalculator` and
+`ReportWriter`. Downloading, calculation and publication keep separate
+responsibilities.
 
-This project started from a neue fische course brief and supplied reference
-implementation, currently in [solution/](solution/README.md). Our implementation
-will stay separate; the reference folder is planned for removal before public
-release. The original notice remains in [LICENSE](LICENSE).
+## Results and limitations
+
+The January–March 2025 [real-data review](docs/data-review.md) recorded:
+
+| Measure | Result |
+|---|---:|
+| Input rides | 146,486 |
+| Accepted rides | 146,475 |
+| Excluded rides | 11, outside the reporting period |
+| Daily facts / calendar dates | 90 / 90 |
+| Recorded charges | $3,395,290.56 USD |
+
+The report saves `fact_daily_revenue.parquet`, a CSV copy, `dim_date.parquet`
+and `metadata.json`. Facts contain one row per accepted pickup day; the date
+dimension describes every day in the period. They join through `service_date`.
+
+- Revenue means recorded `total_amount` charges, not profit; cash tips are not
+  included. We retain zero and negative amounts rather than assuming they are errors.
+- Invalid dates/amounts and out-of-period pickups are excluded and counted.
+  Missing payment type alone does not exclude an otherwise usable ride.
+- File months and pickup months can differ. These results describe the reviewed
+  source files, not a guarantee for future downloads or every ride in the city.
+- Checksums identify the input bytes; they do not prove the fares are correct.
+  Metadata records the period, source identities, code identity and run counts.
+- Report publication is not a multi-file transaction. A replacement failure can
+  leave mixed files without success metadata; fix the error and rerun. An older
+  report left after an early-stage failure is not evidence that the new run succeeded.
+
+See the [data rules and reliability design](docs/adr/001-pipeline-design.md)
+for details. This is a local educational pipeline, not a production reporting service.
+
+## Run the checks
+
+From the project root, after installing the development dependencies:
+
+```bash
+uv sync --locked
+uv run --locked ruff check src tests
+uv run --locked ruff format --check src tests
+uv run --locked pytest -n 2 --dist loadfile
+uv build
+```
+
+| Category | What it checks |
+|---|---|
+| Unit | Settings, logging, date/money rules and calendar generation. |
+| Integration | CLI, file I/O, pipeline wiring, Prefect behavior and reruns. |
+| Data | An additional label for file structure and output rules, not a separate duplicate CI job. |
+
+CI runs quality checks first, then unit, integration and Docker jobs.
+Integration uses two workers grouped by file. Tests use tiny synthetic inputs
+and fake HTTP responses, not public downloads. Docker checks are opt-in locally;
+the [Docker guide](docs/docker-prefect.md#retries-and-checks) explains how to run them.
+
+## Repository layout
+
+```text
+nyc-taxi-revenue-data-pipeline/
+├── src/green_taxi/
+│   ├── settings.py, defaults.json  # Validated run settings
+│   ├── download.py                 # Download and check raw files
+│   ├── revenue.py                  # Apply rules and calculate daily totals
+│   ├── report.py                   # Check and save the report
+│   ├── pipeline.py                 # Connect the stage objects
+│   ├── flow.py                     # Prefect tasks and flow
+│   └── __main__.py, logging.py     # Terminal entry point and logs
+├── tests/
+│   ├── green_taxi/                 # Mirrors the Python package
+│   └── docker/                     # Image and Compose checks
+├── docs/                           # Design, data review and run guide
+│   └── assets/                     # Terminal GIF and Prefect screenshot
+├── data/                           # Generated locally; ignored by Git
+│   ├── raw/                        # Staged source files
+│   └── processed/                  # Daily facts, date dimension and metadata
+├── .github/workflows/              # Automated checks
+├── solution/                       # Supplied course reference
+├── Dockerfile, compose.yaml        # Application and local Prefect runtime
+├── compose.config.yaml             # Read-only host JSON override
+├── .env.example                    # Optional Compose settings
+├── TASKS.md                        # Progress and next steps
+└── pyproject.toml, uv.lock         # Package and locked dependencies
+```
+
+The tree shows the main areas, not every file. Docker's generated data lives in
+its named volume rather than the host `data/` directory.
+
+## Challenges and decisions
+
+- **Agree on rules before cleaning.** Negative charges are not automatically bad
+  records. We documented the decisions before implementing them.
+- **Test the result, not just the exit code.** The data review independently
+  reconciles daily counts and amounts, then checks that a rebuild gives the same tables.
+- **Keep one implementation.** Plain Python and Prefect share the stage objects;
+  orchestration handles execution, not a second set of business rules.
+- **Make storage visible.** Host files and container volumes are different.
+  Configuration changes need either a read-only mount or an image rebuild.
+
+## Project notes
+
+- [Design decisions](docs/adr/001-pipeline-design.md): scope, data rules and object responsibilities.
+- [Real-data review](docs/data-review.md): source identities, reconciliation and repeat-run evidence.
+- [Docker and Prefect](docs/docker-prefect.md): configuration, storage and troubleshooting.
+- [Task list](TASKS.md): reviewed work and planned follow-ups.
+
+The project uses [NYC TLC Green Taxi records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
+The supplied reference remains in [solution/](solution/README.md), separate from
+our implementation, and is planned for removal before public release.
+The original software notice remains in [LICENSE](LICENSE).
