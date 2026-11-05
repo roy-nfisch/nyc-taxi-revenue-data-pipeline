@@ -156,7 +156,7 @@ data/                Local raw files, reports, and original demo media — ignor
 config/local/        Optional local JSON configurations — ignored
 Dockerfile           Non-root image for the batch and local Prefect server
 compose.yaml         Project network, persistent volumes, and manual run services
-compose.config.yaml  Optional read-only custom JSON mount for batch services
+compose.config.yaml  Read current defaults.json without rebuilding; optional custom path
 .env.example         Template for local Compose settings; copy to ignored .env
 .dockerignore        Files excluded from the image build context
 .github/workflows/   Automated checks
@@ -304,7 +304,8 @@ See [Docker and Prefect](docs/docker-prefect.md) for ports, retries, storage,
 inspection, tests, and safe stop/restart commands.
 Packaged JSON defaults remain available; use the documented
 [optional config override](docs/docker-prefect.md#custom-json-configuration-optional)
-to mount your own JSON read-only without rebuilding the image.
+to read the existing `src/green_taxi/defaults.json` read-only without rebuilding
+the image. No new directory or config copy is required.
 Compose settings belong in `.env`; pipeline settings stay in JSON. No Python
 dotenv loader is used. The `.env` template does not enable custom JSON by itself.
 

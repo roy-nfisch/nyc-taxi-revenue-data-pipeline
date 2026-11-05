@@ -7,7 +7,8 @@ reuse `TaxiPipeline.from_settings()` and the same downloader/calculator/writer.
 ## Start and run
 
 Run all commands in this guide in your **Mac/host terminal**, from the repository
-root, not inside a container. Set up Compose settings once:
+root, not inside a container. No local configuration setup is required. To change
+the default UI port, optionally copy the Compose template:
 
 ```bash
 cp .env.example .env
@@ -18,7 +19,7 @@ reads this local file; Python does not load it. It contains only:
 
 ```dotenv
 PREFECT_PORT=4205
-TAXI_CONFIG_FILE=./config/local/run.json
+# TAXI_CONFIG_FILE=./src/green_taxi/defaults.json
 ```
 
 `.env` chooses the host UI port and the optional JSON file to mount. Pipeline
@@ -68,23 +69,18 @@ with the same name takes precedence over `.env`; unset it if an edit seems ignor
 
 ## Custom JSON configuration (optional)
 
-Normal Compose runs use the packaged `defaults.json`; no host config file is
-required. For another start month, duration, or source selection, copy the defaults
-and edit the JSON. Keep local JSON files under `config/local/` (or outside this
-repository). The entire local-config directory is excluded from Git and image
-builds, regardless of the filename:
+Normal Compose runs use the defaults packaged when the image was built. To read
+the current file from your checkout without rebuilding, edit the existing file:
 
 ```bash
-mkdir -p config/local
-cp src/green_taxi/defaults.json config/local/run.json
+code src/green_taxi/defaults.json
 ```
 
 Keep `duration_months` a positive integer, not a quoted string or float. Set only
 `reporting_period.start_month` and `duration_months`: source filenames are derived
 automatically, including year changes. An explicit `months` list is optional for
 advanced source overrides; remove an old list to enable automatic selection.
-No period values are duplicated in Compose. `TAXI_CONFIG_FILE` is set in `.env`; change it there
-if you choose another JSON filename. Then opt into the override:
+No new directory, copied JSON, or `.env` is needed. Save the file, then run:
 
 ```bash
 docker compose -f compose.yaml -f compose.config.yaml run --rm flow
@@ -98,8 +94,8 @@ docker compose -f compose.yaml -f compose.config.yaml run --rm flow \
   python -m green_taxi.flow --config /run-config/run.json --data-dir /data --force
 ```
 
-The earlier refresh command without the override uses packaged defaults, not
-your local JSON.
+The earlier refresh command without the override uses defaults from the image,
+not edits made after the image was built.
 
 For the plain batch without Prefect:
 
@@ -114,12 +110,17 @@ must be able to read the file; use trusted JSON, never secrets. `--data-dir /dat
 still overrides any JSON storage path so reports use the existing named volume.
 Custom runs replace the current report in that volume; they are not a separate
 report archive. Run only one batch at a time. To return to packaged defaults,
-omit `-f compose.config.yaml` again; no image rebuild or Python change is needed.
-Setting `TAXI_CONFIG_FILE` in `.env` alone does not enable a custom mount, so base
-Compose still works even when `config/local/run.json` has not been created.
-Existing `.env` files pointing to `run.local.json` remain supported; move that
-file yourself and update `.env` when convenient. Renaming another JSON file in
-the repository does not automatically make it ignored; use the local directory.
+omit `-f compose.config.yaml` again. The `-f` arguments select Compose files;
+the override mounts `src/green_taxi/defaults.json` read-only inside the container.
+Edits to this tracked JSON will appear in Git. For a separate private config,
+optionally set `TAXI_CONFIG_FILE` in `.env` to an existing readable JSON file;
+keep it outside the repository or under ignored `config/local/`.
+Remove an old `TAXI_CONFIG_FILE` setting to return to the automatic default path.
+An exported shell variable takes precedence over `.env`.
+
+If Docker reports `operation not permitted`, check that the selected host file
+exists and Docker Desktop may access its directory. Missing files are never
+created by Compose. No privileged container or broad permission changes are needed.
 
 Editing JSON does not launch work. Run the flow command again after saving.
 `docker compose up ... prefect` starts the server/UI, not the batch, and does not

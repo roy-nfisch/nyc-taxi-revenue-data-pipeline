@@ -1,7 +1,7 @@
-# Opt-in: set TAXI_CONFIG_FILE in .env, then use -f compose.yaml -f compose.config.yaml.
+# Read the existing defaults directly; TAXI_CONFIG_FILE optionally selects another file.
 x-config-file: &config-file
   type: bind
-  source: ${TAXI_CONFIG_FILE:?Set TAXI_CONFIG_FILE in .env to an existing JSON file}
+  source: ${TAXI_CONFIG_FILE:-./src/green_taxi/defaults.json}
   target: /run-config/run.json
   read_only: true
   bind:

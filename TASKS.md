@@ -182,6 +182,12 @@ been tested; the next CI run must verify them before merge.
 Enforced single-writer locking, digest/signed provenance, and measured image-size
 optimization remain future hardening, not extra requirements for this local demo.
 
+Simplification after manual review: the optional Compose config override now
+mounts the existing `src/green_taxi/defaults.json` by default. No local directory,
+config copy, or `.env` is required. `TAXI_CONFIG_FILE` remains an optional override;
+missing files still fail and all config mounts remain read-only. Updated fallback
+and dotenv contract checks have not been run locally.
+
 ## After Docker and Prefect
 
 - [ ] **T07 — Prepare the portfolio and closeout documentation.** Postponed until

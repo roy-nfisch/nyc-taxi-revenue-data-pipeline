@@ -120,25 +120,41 @@ def test_custom_config_is_readonly_without_replacing_data_volume(tmp_path, servi
     assert len(rendered["prefect"]["volumes"]) == 1
 
 
-def test_custom_override_requires_explicit_file():
-    """An unset/empty custom path fails instead of mounting a guessed directory."""
+@pytest.mark.parametrize("value", [None, ""])
+def test_config_override_defaults_to_existing_json(value):
+    """No local config or .env is required; unset/empty selects tracked defaults."""
+    env = os.environ.copy()
+    env.pop("TAXI_CONFIG_FILE", None)
+    if value is not None:
+        env["TAXI_CONFIG_FILE"] = value
     result = subprocess.run(
         [
             "docker",
             "compose",
+            "--env-file",
+            os.devnull,
             "-f",
             "compose.yaml",
             "-f",
             "compose.config.yaml",
+            "--profile",
+            "manual",
             "config",
+            "--format",
+            "json",
         ],
-        env=os.environ | {"TAXI_CONFIG_FILE": ""},
+        env=env,
+        check=True,
         capture_output=True,
         text=True,
         timeout=30,
     )
-    assert result.returncode != 0
-    assert "TAXI_CONFIG_FILE" in result.stderr
+    services = json.loads(result.stdout)["services"]
+    expected = Path(__file__).resolve().parents[2] / "src/green_taxi/defaults.json"
+    for name in ("pipeline", "flow"):
+        mounts = {mount["target"]: mount for mount in services[name]["volumes"]}
+        assert mounts["/run-config/run.json"]["source"] == str(expected)
+        assert mounts["/run-config/run.json"]["read_only"] is True
 
 
 @pytest.fixture
@@ -151,8 +167,8 @@ def dotenv_project(tmp_path):
     (tmp_path / ".env").write_text(
         template.replace("PREFECT_PORT=4205", "PREFECT_PORT=4217")
     )
-    (tmp_path / "config/local").mkdir(parents=True)
-    (tmp_path / "config/local/run.json").write_text("{}")
+    (tmp_path / "src/green_taxi").mkdir(parents=True)
+    (tmp_path / "src/green_taxi/defaults.json").write_text("{}")
     excluded = {
         "PREFECT_PORT",
         "TAXI_CONFIG_FILE",
@@ -188,7 +204,7 @@ def test_dotenv_is_loaded_without_exporting_compose_settings(dotenv_project, cus
         mounts = {mount["target"]: mount for mount in services[name]["volumes"]}
         if custom:
             assert mounts["/run-config/run.json"]["source"] == str(
-                folder / "config/local/run.json"
+                folder / "src/green_taxi/defaults.json"
             )
             assert mounts["/run-config/run.json"]["read_only"] is True
         else:
