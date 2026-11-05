@@ -32,7 +32,8 @@ def prefect_server():
     with pytest.MonkeyPatch.context() as patch:
         patch.setenv("DO_NOT_TRACK", "1")
         patch.setenv("PREFECT_SERVER_ANALYTICS_ENABLED", "false")
-        with prefect_test_harness():
+        # Keep startup bounded while allowing slower shared CI runners to boot.
+        with prefect_test_harness(server_startup_timeout=90):
             yield
 
 
