@@ -16,6 +16,24 @@ define the source types and shared report format.
 Normalization is separate to keep classification readable. Its character map
 preserves Python 3.13's Unicode digit rules; it does not repair invalid money.
 
+## SQL flow
+
+This shows the query dependencies; the application coordinator is not connected yet.
+
+```mermaid
+flowchart TD
+    A["normalize_money.sql<br/>Register helper once per connection"] --> C
+    B["Raw source table<br/>One file at a time"] --> C
+    C["classify.sql<br/>Check each ride; call the helper for money text"] --> D
+    D["UNION ALL<br/>Combine classified rides; keep duplicates"] --> E
+    D --> F
+    E["counts.sql<br/>Count accepted, excluded and sub-cent rides"]
+    F["daily_revenue.sql<br/>Count accepted rides and sum cents per day"]
+```
+
+Both final queries read the same classifications; neither calls the other.
+The branches show shared inputs, not a promise of parallel execution.
+
 ## How to execute them
 
 Load SQL through `importlib.resources.files("green_taxi.elt").joinpath("sql/<name>.sql")`,
@@ -32,10 +50,10 @@ Materialize each source's classification before checking or aggregating it.
 Combine classifications with `UNION ALL` into `classified`, preserving duplicates.
 Do not combine differently typed raw columns. The final two queries read that relation.
 
-Before saving, reject any `sub_cent` count or zero `rows_used`.
+Before saving, fail the run if `sub_cent > 0` or `rows_used = 0`.
 `counts.sql` returns `COUNT_FIELDS` followed by `sub_cent`.
 Daily output is `service_date`, integer `trip_count` and `revenue_cents BIGNUM`.
-DuckDB returns these exact sums as integer strings; convert them to integer cents,
+DuckDB returns revenue sums as integer strings; convert them to integer cents,
 never through a float.
 
 ## Rules and limits
