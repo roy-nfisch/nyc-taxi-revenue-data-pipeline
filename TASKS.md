@@ -89,16 +89,16 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   point, prior-report preservation, and known/unknown Git identity. No new services
   or dependencies; existing objects keep their responsibilities.
 
-## In progress
-
-- [ ] **T06 — Run the real data and review the result.** Process all three files;
+- [x] **T06 — Run the real data and review the result.** Reviewed and merged in
+  [PR #6](https://github.com/roy-nfisch/mle-data-pipeline-project/pull/6).
+  Process all three files;
   account for included/excluded rows and reconcile report totals with accepted rides.
   Check the saved date dimension and matching daily facts too. Done when outputs
   are inspected, limitations documented, and checks pass from
   a fresh environment. Record evidence, not just a successful exit status.
   Verify a rebuild from staged inputs produces equivalent tables without doubling
   counts or amounts; run-specific metadata may legitimately differ.
-  Local verification complete for review: 146,486 inputs, 146,475 accepted rides,
+  Local verification complete: 146,486 inputs, 146,475 accepted rides,
   11 out-of-period exclusions, 90 daily facts/calendar dates, and $3,395,290.56 USD.
   All daily values reconcile independently; a fresh-environment rebuild preserves
   tables and totals. Evidence, source identities, and limits are recorded in
@@ -111,18 +111,9 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   The review includes a repeatable independent calculation and a rebuild check;
   the documented commands were rerun against the staged real data.
 
-## To do
+## In progress — required orchestration and container delivery
 
-- [ ] **T07 — Prepare the portfolio and close out.** Update the README with the
-  actual file tree, working commands, a small output example, and course reflections.
-  Explain why this is batch ETL, how to manually launch/rebuild the reporting
-  period, and how to deliberately refresh inputs and trace them through metadata.
-  Done when another person can follow the instructions and we have reviewed scope,
-  tests, source attribution, and generated files excluded from Git. Closeout waits
-  for T08 and T09, including verified Docker and Prefect commands, and the final
-  public-release review in T10.
-
-## Required orchestration and container delivery
+Work order: **T08 and T09 → T07 → T10**. Task numbers stay unchanged.
 
 - [ ] **T08 — Prefect orchestration.** Use the shared components in extract,
   transform, and load tasks. Add bounded retries for transient failures, not bad
@@ -131,15 +122,81 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
   transformation logic. Start runs manually; no automatic schedule initially.
   Demonstrate a manual run, rebuild, and simulated transient-failure recovery.
   Prefect is the planned tool; an alternative needs review.
+  Implemented for review: three sequential tasks call shared stage objects and
+  shared lineage/publication code. Download retries are limited to transient
+  network/HTTP failures; real Prefect tests cover recovery, exhaustion, and corrupt
+  data without retries. No schedule or result persistence is added.
 - [ ] **T09 — Docker and Compose.** Package the shared command and Prefect flow;
   run local Prefect services with persistent state and raw/report storage. Check
   occupied ports before starting. Done when a fresh Compose run produces the same
   checked report, a rerun does not duplicate results, and run/inspect/stop commands
   are verified. No public hosting or image publication without separate approval.
+  Implemented for review: non-root image, loopback UI on checked port 4205,
+  explicit project network, and separate persistent data/history volumes. Real
+  container flow and plain-container command both processed the agreed period.
+  CI adds an Ubuntu 24.04 Docker job with tiny synthetic inputs; native Python
+  jobs retain slim runners. See [run instructions](docs/docker-prefect.md).
+  An optional Compose override mounts a trusted custom JSON file read-only for
+  both run modes. Base Compose keeps packaged defaults; missing config paths fail
+  without creating directories. Tests verify the mount rejects writes and a
+  custom reporting month is used by a real container run.
+  Compose-only settings use a committed `.env.example` and ignored host `.env`.
+  Pipeline values stay in JSON; Python has no dotenv loader. Tests cover automatic
+  `.env` loading, shell precedence, and packaged defaults without the override.
 
-T08 and T09 can be developed together once the foundation and pipeline stages
-are ready. Both must pass before final closeout; their numbers do not require
-waiting until after T07 to start container work.
+T08 and T09 can be developed together now that the local pipeline is verified.
+Both must pass before we resume T07 so its documentation covers the actual
+Docker and Prefect commands, not a planned setup.
+
+Prior verification, before the latest follow-up: 215 native application tests passed (13 opt-in Docker tests
+skipped there), all 13 Docker smoke/contract tests passed when enabled, and three reference
+tests, lint/format, package/image builds, and Compose configuration passed. Real
+container facts/calendar matched the reviewed host tables; a rebuild reused
+inputs and preserved 146,475 rides / $3,395,290.56. Down/up preserved run history
+and data. Both tasks remain awaiting review.
+
+Review follow-up: limit retryable server responses to HTTP 500–599; validate all
+Compose profiles in CI. Added full-flow failure propagation, CLI option forwarding,
+forced-refresh retry behavior, saved container values, and loopback/persistence
+contracts. No new service or application abstraction was needed.
+Additional requested follow-up: writable UI bundle directory and HTML-aware
+health check; opt-in Compose end-to-end check using private named volumes and
+the default user; optional image build provenance; ignored local config folder.
+These follow-up checks passed in GitHub CI for commit `9915519`; they were not
+rerun locally during the PR audit.
+Settings now derive source months from the reporting period when `months` is
+omitted. Defaults and the local example require one period edit; an explicit
+source list remains supported. Added year-rollover and invalid-duration cases;
+these cases passed in GitHub CI for commit `9915519`.
+The save task now logs the saved report's period, ride/day counts, and total in
+Prefect after successful publication, without repeating the calculation.
+CI verified on 05.11.2026: the push run
+[42025803602](https://github.com/roy-nfisch/mle-data-pipeline-project/actions/runs/42025803602)
+passed lint/format, reference tests, package build, unit/integration tests, and
+Docker checks. In the separate PR run, checks, unit tests, and Docker checks have
+passed; integration tests were still pending at this review.
+Audit follow-up adds custom-config refresh instructions, updates stale container
+and layout descriptions, and removes explicit months from the Compose end-to-end
+fixture so it exercises automatic period selection. These latest edits have not
+been tested; the next CI run must verify them before merge.
+Enforced single-writer locking, digest/signed provenance, and measured image-size
+optimization remain future hardening, not extra requirements for this local demo.
+
+Simplification after manual review: the optional Compose config override now
+mounts the existing `src/green_taxi/defaults.json` by default. No local directory,
+config copy, or `.env` is required. `TAXI_CONFIG_FILE` remains an optional override;
+missing files still fail and all config mounts remain read-only. Updated fallback
+and dotenv contract checks have not been run locally.
+
+## After Docker and Prefect
+
+- [ ] **T07 — Prepare the portfolio and closeout documentation.** Postponed until
+  T08 and T09 are verified. Update the README with the actual file tree, working
+  commands, a small output example, and course reflections. Explain why this is
+  batch ETL, how to manually launch/rebuild the reporting period, and how to
+  deliberately refresh inputs and trace them through metadata. Done when another
+  person can follow the instructions and we have reviewed scope, tests, source
+  attribution, and generated files excluded from Git. Final public release is T10.
 
 ## Final review and public release
 
@@ -163,6 +220,26 @@ waiting until after T07 to start container work.
     its detailed documentation.
   Done when findings are resolved or clearly documented, the renamed public
   repository works for a new visitor, and the portfolio decision is recorded.
+
+## Optional follow-up — not a release requirement
+
+- [ ] **T11 — Explore an ELT version.** Keep the checked ETL implementation as
+  the comparison baseline; this task does not block T07/T10 or public release.
+  - Agree on a short ADR before implementation. Choose one local analytical
+    database (DuckDB or PostgreSQL), not two implementations.
+  - Extract the same taxi files, then load unchanged source records into raw
+    database tables before applying business transformations. Merely staging
+    Parquet files on disk does not make the current pipeline ELT.
+  - Transform inside the database using SQL, optionally managed by dbt, to build
+    the same daily facts and date dimension. Prefect coordinates the stages;
+    reuse existing downloading, settings, and source identities where suitable.
+  - Preserve the approved dates, exclusions, exact-cent money rules, and lineage.
+    Make repeated raw loads and report builds safe without duplicated records.
+  - Compare all daily values, counts, date references, and totals with the ETL
+    baseline. Test invalid records and rebuilds, document the trade-offs, and
+    keep the code simple and OOD first.
+  Done when an ELT run is reproducible and equivalent under the agreed rules,
+  with a clear explanation of when the extra database/SQL layer is worthwhile.
 
 ## Working agreement
 

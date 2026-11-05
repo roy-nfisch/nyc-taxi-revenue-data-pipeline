@@ -60,6 +60,25 @@ def test_settings_are_immutable():
         PipelineSettings.from_file().months = ("2025-03",)
 
 
+def test_period_derives_months_without_mutating_configuration():
+    """Derivation belongs to the settings object and leaves caller input untouched."""
+    values = {"reporting_period": {"start_month": "2031-12", "duration_months": 2}}
+    settings = PipelineSettings.model_validate(values)
+    assert settings.months == ("2031-12", "2032-01")
+    assert "months" not in values
+    assert isinstance(values["reporting_period"], dict)
+
+
+@pytest.mark.parametrize("months", [None, [], ["2031-12", "2031-12"]])
+def test_invalid_explicit_months_are_not_silently_derived(months):
+    """An invalid advanced override must fail, rather than run a different selection."""
+    with pytest.raises(ValidationError):
+        PipelineSettings(
+            months=months,
+            reporting_period={"start_month": "2031-12", "duration_months": 2},
+        )
+
+
 @pytest.mark.parametrize("timeout", [0.1, 300])
 def test_valid_timeout_boundaries(timeout):
     """Accept positive bounded HTTP timeouts."""

@@ -17,7 +17,8 @@ def test_packaged_defaults_are_loaded_without_writes(tmp_path, monkeypatch):
     """JSON supplies default months even outside the checkout directory."""
     monkeypatch.chdir(tmp_path)
     settings = PipelineSettings.from_file()
-    assert settings.months == tuple(json.loads(DEFAULT_CONFIG.read_text())["months"])
+    assert settings.months == ("2025-01", "2025-02", "2025-03")
+    assert "months" not in json.loads(DEFAULT_CONFIG.read_text())
     assert (settings.reporting_period.start, settings.reporting_period.end) == (
         date(2025, 1, 1),
         date(2025, 4, 1),
@@ -55,8 +56,8 @@ def test_bad_file_fails_without_default_fallback(tmp_path, text):
         PipelineSettings.from_file(config)
 
 
-def test_missing_file_and_missing_constructor_months(tmp_path):
-    """Direct construction requires months; an unreadable file is not ignored."""
+def test_missing_file_and_missing_constructor_selection(tmp_path):
+    """Require a period or source selection; never ignore an unreadable file."""
     with pytest.raises(FileNotFoundError):
         PipelineSettings.from_file(tmp_path / "missing.json")
     with pytest.raises(ValidationError):
@@ -76,6 +77,54 @@ def test_command_loads_config_and_prints_settings(tmp_path):
     assert values["months"] == ["2025-02"]
     assert values["data_dir"] == str(storage)
     assert not storage.exists()
+
+
+@pytest.mark.parametrize(
+    "start, duration, expected",
+    [
+        ("2025-03", 3, ["2025-03", "2025-04", "2025-05"]),
+        ("2031-12", 2, ["2031-12", "2032-01"]),
+        ("2032-02", 1, ["2032-02"]),
+    ],
+)
+def test_period_only_json_derives_download_months(tmp_path, start, duration, expected):
+    """One edit controls source selection and report dates, including year rollover."""
+    config = tmp_path / "run.json"
+    config.write_text(
+        json.dumps(
+            {
+                "reporting_period": {
+                    "start_month": start,
+                    "duration_months": duration,
+                }
+            }
+        )
+    )
+    storage = tmp_path / "data"
+    result = CliRunner().invoke(
+        main, ["--config", str(config), "--data-dir", str(storage)]
+    )
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output)["months"] == expected
+    assert not storage.exists()
+
+
+@pytest.mark.parametrize("duration", [0, -1, 1.0, "1", True, None])
+def test_invalid_period_cannot_generate_months(tmp_path, duration):
+    """Validate strict positive integers before using duration to build filenames."""
+    config = tmp_path / "bad.json"
+    config.write_text(
+        json.dumps(
+            {
+                "reporting_period": {
+                    "start_month": "2025-01",
+                    "duration_months": duration,
+                }
+            }
+        )
+    )
+    with pytest.raises(ValidationError):
+        PipelineSettings.from_file(config)
 
 
 def test_command_default_and_help():

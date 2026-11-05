@@ -1,14 +1,15 @@
 """Connect staging, calculation, and report writing without copying their rules."""
 
 import logging
+import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from green_taxi.download import TaxiDownloader
+from green_taxi.download import StagedFile, TaxiDownloader
 from green_taxi.report import ReportWriter
-from green_taxi.revenue import DailyRevenueCalculator
+from green_taxi.revenue import DailyRevenueCalculator, RevenueResult
 from green_taxi.settings import PipelineSettings
 
 logger = logging.getLogger(__name__)
@@ -18,13 +19,19 @@ def code_identity() -> dict:
     """Return checkout revision/dirty status, or explicit unknowns when unavailable.
 
     Inspect only this package's checkout, not an unrelated caller's repository.
-    Installed wheels without a checkout have no assumed revision. Git calls are
+    Installed wheels report supplied build metadata, or explicit unknowns. Git calls are
     bounded and read-only; unavailable Git does not prevent data processing.
     """
     root = Path(__file__).resolve().parents[2]
     unknown = {"revision": "unknown", "dirty": "unknown"}
     if not (root / ".git").exists():
-        return unknown
+        dirty = {"true": True, "false": False}.get(
+            os.environ.get("GREEN_TAXI_BUILD_DIRTY", ""), "unknown"
+        )
+        return {
+            "revision": os.environ.get("GREEN_TAXI_BUILD_REVISION") or "unknown",
+            "dirty": dirty,
+        }
     try:
         revision = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -48,7 +55,7 @@ def code_identity() -> dict:
 
 
 class TaxiPipeline:
-    """Coordinate existing objects; run manually in Python or a later Prefect flow.
+    """Coordinate existing objects; run manually in Python or the Prefect flow.
 
     Dependencies are supplied, so tests can replace network I/O without replacing
     the calculation or writer. No work runs during construction. Concurrent runs
@@ -76,15 +83,40 @@ class TaxiPipeline:
         Failures propagate without returning success. Outputs replace old tables,
         never append. A prior report remains a prior run, not evidence of this one.
         """
-        started = datetime.now(timezone.utc).isoformat()
-        run_id = str(uuid4())
-        logger.info("Starting run %s", run_id)
+        context = self.start_run()
         inputs = self.downloader.download(force=force)
         result = self.calculator.calculate(item.path for item in inputs)
-        metadata = {
-            "run_id": run_id,
-            "started_at": started,
+        return self.save(inputs, result, context)
+
+    @classmethod
+    def from_settings(cls, settings: PipelineSettings) -> "TaxiPipeline":
+        """Compose the same stage objects for plain Python and Prefect callers."""
+        return cls(
+            settings,
+            TaxiDownloader(settings),
+            DailyRevenueCalculator(settings.reporting_period),
+            ReportWriter(settings.processed_dir),
+        )
+
+    def start_run(self) -> dict:
+        """Create UTC start time, UUID, and code identity before any stage runs."""
+        context = {
+            "run_id": str(uuid4()),
+            "started_at": datetime.now(timezone.utc).isoformat(),
             "code": code_identity(),
+        }
+        logger.info("Starting run %s", context["run_id"])
+        return context
+
+    def save(
+        self, inputs: tuple[StagedFile, ...], result: RevenueResult, context: dict
+    ) -> Path:
+        """Add input lineage, publish checked outputs, and return metadata path.
+
+        Both execution paths call this method; neither copies the metadata rules.
+        Writer failures propagate without a completed-run log message.
+        """
+        metadata = context | {
             "inputs": [
                 {
                     "filename": item.path.name,
@@ -98,5 +130,5 @@ class TaxiPipeline:
             ],
         }
         path = self.writer.write(result, self.settings.reporting_period, metadata)
-        logger.info("Completed run %s", run_id)
+        logger.info("Completed run %s", context["run_id"])
         return path

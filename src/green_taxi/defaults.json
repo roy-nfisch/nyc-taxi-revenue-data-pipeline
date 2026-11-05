@@ -1,5 +1,4 @@
 {
-  "months": ["2025-01", "2025-02", "2025-03"],
   "source_url": "https://d37ci6vzurychx.cloudfront.net/trip-data",
   "reporting_period": {
     "start_month": "2025-01",

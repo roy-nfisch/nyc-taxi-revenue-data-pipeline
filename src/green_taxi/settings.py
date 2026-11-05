@@ -64,13 +64,24 @@ class ReportingPeriod(BaseModel):
         Derivation handles leap years and December-to-January transitions. It
         never assumes that a month has thirty days or consults today's date.
         """
-        index = self.start.year * 12 + self.start.month - 1 + self.duration_months
+        return self._month_start(self.duration_months)
+
+    def _month_start(self, offset: int) -> date:
+        """Resolve a calendar-month offset; reject dates past the supported range."""
+        index = self.start.year * 12 + self.start.month - 1 + offset
         year, month = divmod(index, 12)
         if year > date.max.year:
             raise ValueError(
                 "Reporting period extends beyond supported calendar years."
             )
         return date(year, month + 1, 1)
+
+    @property
+    def months(self) -> tuple[str, ...]:
+        """Return chronological YYYY-MM names for all months in this period."""
+        return tuple(
+            self._month_start(i).isoformat()[:7] for i in range(self.duration_months)
+        )
 
     def contains(self, day: date) -> bool:
         """Return whether day belongs to the start-inclusive/end-exclusive range."""
@@ -87,8 +98,9 @@ class PipelineSettings(BaseModel):
     """Hold validated run settings that cannot be reassigned after construction.
 
     Inputs:
-        months: One or more distinct calendar months in YYYY-MM format. Required
-            for direct construction; from_file() reads the selection from JSON.
+        months: Optional explicit source selection in YYYY-MM format. If omitted,
+            derive it from an explicitly supplied reporting_period. At least one
+            of these settings must be supplied; an empty configuration is invalid.
         data_dir: Storage root, defaulting to ./data relative to the caller's
             working directory. An absolute path can point to a container mount.
         timeout_seconds: Positive HTTP timeout up to 300 seconds, default 60.
@@ -99,7 +111,8 @@ class PipelineSettings(BaseModel):
             source: syntax validation is not a network access-control policy.
         reporting_period: Starting month and positive month count from JSON;
             start-inclusive/end-exclusive dates are derived internally.
-            This is separate from which monthly source files are selected.
+            Normally determines source months too. Explicit months override only
+            source selection; pickup-date inclusion still uses reporting_period.
 
     Result:
         A settings object with an absolute data_dir and derived raw_dir and
@@ -122,6 +135,23 @@ class PipelineSettings(BaseModel):
     source_url: HttpUrl = Field(default_factory=default_source_url)
     reporting_period: ReportingPeriod = Field(default_factory=default_reporting_period)
 
+    @model_validator(mode="before")
+    @classmethod
+    def derive_months(cls, values: object) -> object:
+        """Fill omitted source months from a validated period without editing input.
+
+        An explicit months selection remains authoritative, including invalid
+        selections which must fail rather than silently becoming defaults.
+        """
+        if (
+            isinstance(values, dict)
+            and "months" not in values
+            and "reporting_period" in values
+        ):
+            period = ReportingPeriod.model_validate(values["reporting_period"])
+            return values | {"months": period.months, "reporting_period": period}
+        return values
+
     @field_validator("source_url")
     @classmethod
     def validate_source_url(cls, value: HttpUrl) -> HttpUrl:
@@ -143,11 +173,12 @@ class PipelineSettings(BaseModel):
             data_dir: Optional override of JSON storage, useful for Docker mounts.
         Returns:
             PipelineSettings; relative data paths use the current working directory,
-            not the JSON file's directory. Month order is preserved.
+            not the JSON file's directory. Explicit month order is preserved;
+            omitted months are derived chronologically from reporting_period.
         Raises:
             OSError: The file cannot be read.
             ValueError: JSON is malformed or its top-level value is not an object.
-            ValidationError: Missing months, unknown keys, or invalid settings.
+            ValidationError: Missing period/source selection, unknown keys, or invalid settings.
 
         Reads configuration only. Never silently falls back after a supplied
         file fails, and never creates storage or starts a network connection.

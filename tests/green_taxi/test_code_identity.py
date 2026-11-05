@@ -24,10 +24,28 @@ def test_unavailable_git_is_explicit(monkeypatch, failure):
 
 def test_wheel_does_not_inspect_callers_repository(monkeypatch, tmp_path):
     """A package outside a checkout never attributes work to an unrelated cwd."""
+    monkeypatch.delenv("GREEN_TAXI_BUILD_REVISION", raising=False)
+    monkeypatch.delenv("GREEN_TAXI_BUILD_DIRTY", raising=False)
     monkeypatch.setattr(
         pipeline, "__file__", str(tmp_path / "src/green_taxi/pipeline.py")
     )
     assert pipeline.code_identity() == {"revision": "unknown", "dirty": "unknown"}
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [("true", True), ("false", False), ("unknown", "unknown"), ("garbage", "unknown")],
+)
+def test_installed_package_reports_build_identity(
+    monkeypatch, tmp_path, value, expected
+):
+    """An image build stamp identifies its source without pretending Git is present."""
+    monkeypatch.setattr(
+        pipeline, "__file__", str(tmp_path / "src/green_taxi/pipeline.py")
+    )
+    monkeypatch.setenv("GREEN_TAXI_BUILD_REVISION", "reviewed-build")
+    monkeypatch.setenv("GREEN_TAXI_BUILD_DIRTY", value)
+    assert pipeline.code_identity() == {"revision": "reviewed-build", "dirty": expected}
 
 
 @pytest.mark.parametrize("status, dirty", [("", False), (" M src/example.py\n", True)])
