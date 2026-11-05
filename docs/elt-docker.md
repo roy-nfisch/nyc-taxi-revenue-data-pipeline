@@ -54,8 +54,7 @@ confirm the default ETL image does not install DuckDB. Container probes use
 image names shown above, independent of custom deployment image names.
 
 The regular Docker CI job builds both variants and runs all Docker checks.
-The manual ETL release workflow also builds the ELT image **for verification
-only** because it runs the same tests. It still saves and publishes only the
-tested default ETL image; no ELT image/tag is uploaded or substituted for ETL
-`latest`. Publishing the ELT image needs separate approval after the complete
-ELT pipeline has been connected and verified.
+The manual release workflow defaults to ETL. Choosing ELT selects its own package
+and image command, without changing ETL tags. See [publishing ELT](elt-publishing.md)
+for approval, verification and first-package visibility steps. No release runs
+automatically when these changes are merged.

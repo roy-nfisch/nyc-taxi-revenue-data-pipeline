@@ -335,22 +335,23 @@ and dotenv contract checks passed in the final Docker CI job.
   [PR #11](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/pull/11);
   [ADR 002](docs/adr/002-elt-comparison.md): DuckDB, plain SQL, transactional raw
   loading and a separate optional execution path. Folder separation is merged;
-  the optional dependency/registry foundation is in progress in T11.2, with no
-  loading or transformation stages. Keep the checked ETL implementation as
+  dependency setup, loading, SQL and Docker preparation are merged. Runtime
+  integration is verified in its review PR; publication preparation is separate.
+  Keep the checked ETL implementation as
   the comparison baseline; this task does not block T07/T10 or public release.
   GPT-6 Astra and GPT-6.1 Terra reviewed the proposal. The owner accepted their
   clarifications: preserve raw types without turning invalid rows into batch
   failures, verify installed-package/container execution and ETL without extras,
   avoid mandatory per-ride identity, and extract shared helpers only when needed.
   ADR 002 records the checks and why this is a learning comparison, not an upgrade.
-  T11.2 and later work remain separate from the behaviour-preserving folder move.
+  Actual image publication remains approval-gated and is not yet complete.
 
 ### T11 delivery plan
 
 Each implementation task includes its focused tests, documentation and review.
 Keep objects small, use composition and reuse fixtures; do not create a new
-framework or duplicate the existing ETL tests. The following are proposed tasks,
-not completed work or permission to publish.
+framework or duplicate the existing ETL tests. Checked items below record actual
+completion; implementation does not grant permission to publish.
 
 - [x] **T11.1 — Separate the folders.** Reviewed and merged in
   [PR #12](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/pull/12).
@@ -430,6 +431,9 @@ not completed work or permission to publish.
   all daily values, calendar rows and counters on two SQL reruns:
   146,486 read, 146,475 accepted, 90 dates and USD 3,395,290.56.
   Storage/memory/maintenance costs and manual commands are in the run guide.
+  Independent Astra review found missing execution provenance; corrected both
+  contexts to record mode/engine version and added emitted-JSON assertions.
+  The reviewer confirmed the fix; passive imports and targeted regressions passed.
   No image has been published; owner review and merge remain separate.
 
 - [ ] **T11.7 — Publish the reviewed ELT image.** Depends on merged T11.6, passing
@@ -441,6 +445,16 @@ not completed work or permission to publish.
   can be pulled without login and a fresh non-root run produces checked outputs.
   Record its digest and run instructions; publishing an image does not deploy a
   running service.
+  Release support prepared in a separate dependent PR: manual variant choice,
+  dedicated `nyc-taxi-revenue-data-pipeline-elt` package, ELT default command,
+  tested-image/digest checks and unchanged ETL package/tags. Offline tests cover
+  variant/date/branch rejection. No workflow dispatch or publication performed.
+  Verification: both final Docker targets built; 496 full-stack parallel tests
+  passed with Docker enabled, including five ELT image/preparation checks and
+  32 offline release-safety tests. Ruff lint/format and whitespace checks passed.
+  Before completion: merge the runtime and release PRs, approve package/tag,
+  publish from main, verify package visibility and anonymous pull, run the fresh
+  image non-root and record its digest. These remain unchecked until performed.
 
 ### Parallel work and PR order
 
