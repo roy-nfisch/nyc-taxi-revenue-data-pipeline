@@ -1,10 +1,9 @@
 # ETL and ELT contracts
 
 This document distinguishes the existing Python ETL from the planned database-first
-ELT. ELT components are delivered separately; there is no end-to-end ELT command yet.
-The task list records each component's delivery status.
-The design and delivery plan remain in [ADR 002](adr/002-elt-comparison.md) and
-[TASKS.md](../TASKS.md#t11-delivery-plan).
+ELT. Raw loading and transformation SQL are available as separate components;
+there is no end-to-end ELT command yet.
+The design is described in [ADR 002](adr/002-elt-comparison.md).
 
 | | ETL — implemented | ELT — proposed |
 |---|---|---|
@@ -61,7 +60,7 @@ table and registry entry. Unknown or lossy mappings stop the batch explicitly;
 never silently stringify, round, drop columns or strip timezone information.
 Automatic schema evolution is not part of this project. This foundation does
 not yet claim that every Parquet type is supported; raw loading must document
-and test the supported mappings, including the mixed-type required-column fixtures.
+and test the supported mappings, including mixed-type required-column fixtures.
 Boolean amounts and aware pickups are invalid *rows* under our rules, not reasons
 to reject an otherwise representable source. SQL counts their exclusions.
 
@@ -71,7 +70,7 @@ A failed replacement rolls back both. A failure on any selected source stops the
 run before calculation/publication, even if earlier source loads committed.
 Two different source filenames with the same bytes must both contribute.
 
-## Object boundary for the next tasks
+## Object responsibilities
 
 ### Per-source SQL boundary
 
@@ -87,7 +86,9 @@ Unsupported required-column types must be reported explicitly; do not guess a
 label. These labels describe source types, not whether individual rows are valid.
 Text still requires per-row parsing using the existing ETL date/money rules.
 
-`classify.sql` reads one validated, quoted `raw.source_YYYY_MM` identifier and
+Execute packaged `normalize_money.sql` once per connection to register the
+temporary money-text helper. `classify.sql` then reads one validated, quoted
+`raw.source_YYYY_MM` identifier and
 binds `$period_start`, `$period_end`, `$pickup_kind` and `$amount_kind`. It returns
 one row for every input row, including duplicates, with this common shape:
 
@@ -131,10 +132,10 @@ These are proposed method contracts for review, not placeholder Python methods:
 
 Raw loading owns the connection and `schema.sql`. Transformations use
 classification, aggregation and counter SQL against the agreed source tables;
-their fixtures can create tiny tables directly without importing an unfinished
-loader. Planned integration will connect query execution and result conversion
-through `calculate`, then connect Prefect and the existing report writer. Do not
-add empty methods or a generic backend interface just to let branches start early.
+their fixtures can create tiny tables directly without importing the loader.
+The planned coordinator connects query execution and result conversion through
+`calculate`, then connects Prefect and the existing report writer. Avoid empty
+methods or a generic backend interface without a concrete need.
 
 Query inputs use bound parameters; generated table identifiers must be validated
 and quoted separately. Do not interpolate arbitrary filenames or settings into SQL.

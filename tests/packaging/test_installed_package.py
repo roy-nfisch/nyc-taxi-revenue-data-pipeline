@@ -78,6 +78,9 @@ sql = files('green_taxi.elt').joinpath('sql/schema.sql').read_text()
 with duckdb.connect(':memory:') as database:
     database.execute(sql)
     assert database.execute('SELECT count(*) FROM loaded_sources').fetchone() == (0,)
+    helper = files('green_taxi.elt').joinpath('sql/normalize_money.sql').read_text()
+    database.execute(helper)
+    assert database.execute("SELECT normalize_money_text(' 1_2.30 ')").fetchone() == ('12.30',)
 """)
 
 

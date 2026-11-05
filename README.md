@@ -254,7 +254,6 @@ nyc-taxi-revenue-data-pipeline/
 ├── compose.config.yaml             # Read-only host JSON override
 ├── compose.elt.yaml                # Separate ELT image checks
 ├── .env.example                    # Optional Compose settings
-├── TASKS.md                        # Progress and next steps
 └── pyproject.toml, uv.lock         # Package and locked dependencies
 ```
 
@@ -274,7 +273,7 @@ its named volume rather than the host `data/` directory.
 - [ELT design](docs/adr/002-elt-comparison.md) and [contracts](docs/etl-elt-contract.md): the database-first comparison.
 - [Real-data review](docs/data-review.md): source identities, reconciliation and repeat-run evidence.
 - [Docker and Prefect](docs/docker-prefect.md): configuration, storage and troubleshooting.
-- [Task list](TASKS.md): reviewed work and planned follow-ups.
+- [Image publishing](docs/docker-prefect.md#publish-to-ghcr): manual release steps and approval gates.
 
 The project uses [NYC TLC Green Taxi records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
 The original software notice remains in [LICENSE](LICENSE).
