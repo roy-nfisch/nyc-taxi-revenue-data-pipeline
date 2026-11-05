@@ -278,6 +278,11 @@ and dotenv contract checks passed in the final Docker CI job.
   pickups outside January–March, 153 negative and 33 zero amounts, matching the
   recorded inspection. Both selected columns had no missing values. Notebook
   outputs and execution counts remain clear. Awaiting owner review in Jupyter.
+  Exploration now follows the selected period end to end: source files, row
+  counts, date checks and labels. Verified in-memory notebook runs for March
+  alone (51,539 rows; 11 outside March) and January–March (146,486 rows; 11
+  outside that period). No saved outputs or test-suite execution; the March
+  selection remains in the notebook for the owner's exploration.
 
 - [ ] **Portfolio review — Revisit the website entry.** After T10b, T10, and
   T10a are complete, assess whether the finished project adds value to
