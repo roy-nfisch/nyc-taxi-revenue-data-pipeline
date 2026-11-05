@@ -202,6 +202,8 @@ dimension describes every day in the period. They join through `service_date`.
   source files, not a guarantee for future downloads or every ride in the city.
 - Checksums identify the input bytes; they do not prove the fares are correct.
   Metadata records the period, source identities, code identity and run counts.
+  For reused files, the original download URL is unknown; metadata keeps the
+  current configured URL separately rather than attributing cached bytes to it.
 - Report publication is not a multi-file transaction. A replacement failure can
   leave mixed files without success metadata; fix the error and rerun. An older
   report left after an early-stage failure is not evidence that the new run succeeded.
@@ -254,7 +256,7 @@ nyc-taxi-revenue-data-pipeline/
 │   ├── raw/                        # Staged source files
 │   └── processed/                  # Daily facts, date dimension and metadata
 ├── .github/workflows/              # Automated checks
-├── solution/                       # Supplied course reference
+├── .github/scripts/                # Release-tag safety check
 ├── Dockerfile, compose.yaml        # Application and local Prefect runtime
 ├── compose.config.yaml             # Read-only host JSON override
 ├── .env.example                    # Optional Compose settings
@@ -282,9 +284,10 @@ its named volume rather than the host `data/` directory.
 - [Real-data review](docs/data-review.md): source identities, reconciliation and repeat-run evidence.
 - [Exploration notebook](notebooks/01-explore-green-taxi.ipynb): inspect one staged file without changing it.
 - [Docker and Prefect](docs/docker-prefect.md): configuration, storage and troubleshooting.
+- [Image publishing](docs/docker-prefect.md#publish-to-ghcr): manual release steps and approval gates.
 - [Task list](TASKS.md): reviewed work and planned follow-ups.
 
 The project uses [NYC TLC Green Taxi records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
-The supplied reference remains in [solution/](solution/README.md), separate from
-our implementation, and is planned for removal before public release.
+The course reference was used during development and is not included in the
+public-release source tree. Historical verification records still mention it.
 The original software notice remains in [LICENSE](LICENSE).

@@ -196,7 +196,7 @@ tiny synthetic input in its own named volume, and a custom read-only JSON. It
 checks the real UI/JS bundle, flow/task states, rebuild, and restart persistence,
 then removes only that test project's containers, network, and volumes.
 Prefect integration tests use an isolated temporary server, not this Compose
-server. Docker CI uses an Ubuntu 24.04 VM because `ubuntu-slim` is not our Docker
+server. Docker CI uses an Ubuntu 26.04 VM because `ubuntu-slim` is not our Docker
 build/test runner; unit and integration jobs retain their existing slim runner.
 
 ## Stop safely
@@ -210,6 +210,51 @@ Starting again keeps reports and run history. Do not add `--volumes` unless you
 deliberately want to delete them. Demo Radar and other projects are unaffected.
 The server has no authentication and is for local use only; do not expose its port
 publicly or mount the Docker socket. No cloud deployment or image publication.
+
+## Publish to GHCR
+
+The manual release workflow is prepared; **no image has been published yet**.
+Publishing distributes the app, not the taxi data, and does not deploy Prefect.
+
+After the final-review changes are merged and the owner approves a release:
+
+1. In GitHub Actions, select **Publish pipeline image**, choose `main`, and enter
+   an unused date tag: `2026.11.05`, or `2026.11.05.1` for another release that day.
+2. The workflow checks Python/package quality, builds the image, and runs the
+   tests. Only the separate publishing job has `packages: write` permission.
+   GitHub supplies `GITHUB_TOKEN`; no personal token needs to be created.
+3. It rejects an existing dated tag, transfers the exact tested image, publishes
+   the dated/commit tags, pulls the published digest, and verifies a tiny staged
+   pipeline run. Only then does it update `latest`.
+4. The owner must make the GHCR package public in its settings and verify an
+   anonymous pull. A public repository does not establish public package access.
+
+The initial workflow targets **Linux amd64** on Ubuntu 26.04. Local Docker builds
+remain available for the host architecture. Multi-platform release is not claimed.
+If first-publication authorization fails, stop and review package permissions;
+never interpret 401/403 as permission to overwrite a tag. If verification fails
+after a dated tag was pushed, fix the cause and use a new suffix. Do not reuse it.
+
+After a release exists, set its real tag in a host terminal:
+
+```bash
+export TAXI_IMAGE=ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline:YYYY.MM.DD
+docker pull "$TAXI_IMAGE"
+docker compose up -d --wait --no-build --pull always prefect
+docker compose run --rm --no-build --pull always flow
+```
+
+Replace `YYYY.MM.DD`; the placeholder is not a published release. The same named
+data/history volumes are used, so this is not automatically a fresh-data run.
+The read-only JSON override still works with the published image. To return to
+local builds, run `unset TAXI_IMAGE` and remove or comment out any `TAXI_IMAGE`
+entry in `.env` before the normal build/start commands. Otherwise Compose will
+still use the value from `.env`.
+
+The release run's summary records the digest and tags. Before calling the release
+complete, record the actual link here and verify a pull using empty Docker login
+configuration plus a fresh isolated project/volume. Never remove normal user volumes
+for that check. See [GHCR documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
 
 References: [Prefect retries](https://docs.prefect.io/v3/how-to-guides/workflows/retries),
 [Prefect result caching](https://docs.prefect.io/v3/concepts/caching),

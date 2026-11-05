@@ -2,7 +2,7 @@ name: green-taxi
 
 x-runtime: &runtime
   init: true
-  image: green-taxi:local
+  image: ${TAXI_IMAGE:-green-taxi:local}
   build:
     context: .
     args:
