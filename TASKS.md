@@ -351,8 +351,11 @@ and dotenv contract checks passed in the final Docker CI job.
     keep the code simple and OOD first.
   Done when an ELT run is reproducible and equivalent under the agreed rules,
   with a clear explanation of when the extra database/SQL layer is worthwhile.
-  GPT-6 Astra reviewed the proposal. Clarified source-scoped reruns, failure
-  propagation, exact exclusion order and separate baseline/comparison outputs.
+  GPT-6 Astra and GPT-6.1 Terra reviewed the proposal. The owner accepted their
+  clarifications: preserve raw types without turning invalid rows into batch
+  failures, verify installed-package/container execution and ETL without extras,
+  avoid mandatory per-ride identity, and extract shared helpers only when needed.
+  ADR 002 records the checks and why this is a learning comparison, not an upgrade.
   This is a design-only change; no database, dependencies or pipeline behavior
   have changed. Implementation waits for owner approval of ADR 002.
 
