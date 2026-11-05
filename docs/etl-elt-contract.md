@@ -86,7 +86,9 @@ Unsupported required-column types must be reported explicitly; do not guess a
 label. These labels describe source types, not whether individual rows are valid.
 Text still requires per-row parsing using the existing ETL date/money rules.
 
-`classify.sql` reads one validated, quoted `raw.source_YYYY_MM` identifier and
+Execute packaged `normalize_money.sql` once per connection to register the
+temporary money-text helper. `classify.sql` then reads one validated, quoted
+`raw.source_YYYY_MM` identifier and
 binds `$period_start`, `$period_end`, `$pickup_kind` and `$amount_kind`. It returns
 one row for every input row, including duplicates, with this common shape:
 

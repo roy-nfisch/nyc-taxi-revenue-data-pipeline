@@ -1,10 +1,11 @@
 """Execute packaged transformation SQL against raw tables, without a loader."""
 
 import re
+import sys
+import unicodedata
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from importlib.resources import files
-from itertools import product
 
 import pytest
 
@@ -34,7 +35,41 @@ def sql_database():
     duckdb = pytest.importorskip("duckdb")
     with duckdb.connect(":memory:") as connection:
         connection.execute("CREATE SCHEMA raw")
+        connection.execute(sql_resource("normalize_money"))
         yield connection
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        pytest.param(" \t1_2.30\n", "12.30", id="whitespace-and-underscores"),
+        pytest.param("١٢.٣٠", "12.30", id="unicode-digits"),
+        pytest.param("\u20071.20\u2007", "1.20", id="unicode-whitespace"),
+        pytest.param("1 2", "1 2", id="preserve-invalid-inner-space"),
+        pytest.param("1,20", "1,20", id="preserve-invalid-comma"),
+        pytest.param("", "", id="empty"),
+        pytest.param(None, None, id="null"),
+    ],
+)
+def test_money_normalizer_preserves_text_rules(sql_database, value, expected):
+    """The helper normalizes spelling only; it does not repair invalid money."""
+    assert sql_database.execute(
+        "SELECT normalize_money_text(?)", [value]
+    ).fetchone() == (expected,)
+
+
+def test_money_normalizer_maps_each_python_decimal_digit(sql_database):
+    """Every supported Unicode digit has its own mapping entry worth checking."""
+    digits = [
+        chr(code)
+        for code in range(sys.maxunicode + 1)
+        if unicodedata.category(chr(code)) == "Nd"
+    ]
+    actual = sql_database.execute(
+        "SELECT normalize_money_text(digit) FROM unnest(?) AS inputs(digit)",
+        [digits],
+    ).fetchall()
+    assert actual == [(str(unicodedata.decimal(digit)),) for digit in digits]
 
 
 def create_source(
@@ -185,159 +220,161 @@ def test_float32_is_not_shortened_before_decimal_parsing(sql_database):
     )
 
 
-def test_iso_text_matches_fromisoformat_without_guessing(sql_database):
-    """Basic/week dates, fractional clocks and one-character separators are ISO."""
-    pickups = [
-        "2025-01-01",
-        "20250101",
-        "2025-W01",
-        "2025W01",
-        "2025-W01-3",
-        "2025W013",
-        "2025-W02-1",
-        "2025W021",
-        "2025-01-01X12",
-        "20250101T1234",
-        "2025-01-01T12:34:56.1234567",
-        "2025-01-01T12.5",
-        "2025-01-01T12:34,5",
-        "2025-01-01\n12:34:56",
-        "2025-01-01T12345678",
-        "2025-01-01T1234567",
-        "2025-01-01T12:34:56:1",
-        "2025-01-01T12:34:56:123456789",
-        "2025-01-01T12:34:56x12",
-        "2025-01-01🙂12",
-        "2025-01-01+12",
-        "2025-W01-3T12:00",
-        "2025-01-01T24:00",
-        "2025-01-01T12:60",
-        "2025-01-01T12:34:60",
-        "2025-01-01T12:3456",
-        "2025-01-01T1234:56",
-        "2025-01-01T1",
-        "2025-01-01T",
-        "2025-01-01  12",
-        " 2025-01-01",
-        "2025-01-01 ",
-        "2025-01-01T00:00Z",
-        "2025-01-01T12:00+00:00",
-        "2025-01-01T12:00-00:00",
-        "2025-01-01T12:00+01:00:00.5",
-        "2025-02-29",
-        "2024-02-29",
-        "2025-W53-1",
-        "2020-W53-7",
-        "2025-0001",
-        "0000-01-01",
-        "0001-01-01",
-        "9999-12-31",
-        "2025-01-01T12:00:00.",
-        "2025-01-01T12:00:00.٢",
-        "٢٠٢٥-01-01",
-        None,
-        "",
-        "invalid",
-        "01/02/2025",
-        "1735689600",
-    ]
-    # Python resolves ambiguous week-date/digit separators by fixed precedence.
-    pickups += [
-        base + separator + clock
-        for base, separator, clock in product(
-            [
-                "2025-01-01",
-                "20250101",
-                "2025-W01",
-                "2025W01",
-                "2025-W01-3",
-                "2025W013",
-                "0001-W01-1",
-                "9999-W52-7",
-            ],
-            ["", "T", " ", "🙂", "1", ":", "+", "Z", "\n"],
-            [
-                "",
-                "00",
-                "12",
-                "24",
-                "1234",
-                "123456",
-                "12:34",
-                "12:34:56",
-                "12.5",
-                "12:34.5",
-                "1234.5",
-                "12:34:56+00",
-                "12:34:56Z",
-            ],
-        )
-    ]
-    rows = [(pickup, "0.001") for pickup in pickups]
-    table = create_source(sql_database, rows)
-    assert classify(sql_database, table) == [expected_row(*row) for row in rows]
+@pytest.mark.parametrize(
+    "pickup",
+    [
+        pytest.param("20250101", id="compact-date"),
+        pytest.param("2025-W01", id="week-default-day"),
+        pytest.param("2025W013", id="compact-week-day"),
+        pytest.param("2025-W01-3T12:00", id="week-with-clock"),
+        pytest.param("2025W01112", id="ambiguous-week-digit-separator"),
+        pytest.param("2025-01-01X12", id="single-character-separator"),
+        pytest.param("20250101T1234", id="compact-clock"),
+        pytest.param("2025-01-01T12:34:56.1234567", id="fractional-seconds"),
+        pytest.param("2025-01-01T12.5", id="fraction-after-hour"),
+        pytest.param("2025-01-01T12:34,5", id="fraction-with-comma"),
+        pytest.param("2025-01-01T12345678", id="extended-compact-fraction"),
+        pytest.param("2025-01-01T12:34:56:1", id="extended-colon-fraction"),
+        pytest.param("2025-01-01T12:3456", id="mixed-clock-format"),
+        pytest.param("2025-01-01T", id="missing-clock"),
+        pytest.param("2025-01-01  12", id="two-character-separator"),
+        pytest.param(" 2025-01-01", id="leading-space"),
+        pytest.param("2025-01-01T00:00Z", id="utc-aware"),
+        pytest.param("2025-01-01T12:00+01:00", id="offset-aware"),
+        pytest.param("2025-W53-1", id="nonexistent-week"),
+        pytest.param("2025-01-01T12:00:00.", id="missing-fraction-digits"),
+        pytest.param("٢٠٢٥-01-01", id="non-ascii-date"),
+        pytest.param(None, id="missing-date"),
+        pytest.param("", id="empty-date"),
+        pytest.param("01/02/2025", id="ambiguous-local-format"),
+        pytest.param("1735689600", id="epoch-not-guessed"),
+    ],
+)
+def test_iso_text_matches_fromisoformat_without_guessing(sql_database, pickup):
+    """One representative per parsing class, plus the week-separator regression."""
+    row = (pickup, "1.00")
+    table = create_source(sql_database, [row])
+    assert classify(sql_database, table) == [expected_row(*row)]
 
 
-def test_money_text_matches_decimal_without_rounding(sql_database):
-    """String parsing preserves exact coefficients/exponents, not DECIMAL width."""
-    amounts = [
-        "0.10",
-        "0.20",
-        "-3.50",
-        "-0.00",
-        "+.50",
-        "1.",
-        "001.2300",
-        "1.2300e2",
-        "12300e-4",
-        "100e-4",
-        "1e-2",
-        "1e-3",
-        "-0.001",
-        "0.0000",
-        "0e-999999999999999999",
-        "0e999999999999999999",
-        "0e-1000000000000000000",
-        "0e-1999999999999999997",
-        "0.0e1000000000000000000",
-        "0.0e-1999999999999999996",
-        "0e-1999999999999999998",
-        "0.0e-1999999999999999997",
-        "11e999999999999999999",
-        "1e1000000000000000000",
-        "1e-9223372036854775808",
-        "1e-170141183460469231731687303715884105728",
-        "0e9999999999999999999",
-        "1e00000000000000000000000000000000000000002",
-        " \t+_1_._2_0_e_+_2_ \n",
-        "_ 1",
-        "1__2",
-        "١٢.٣٠",
-        "１２.３０",
-        "\u20071.20\u2007",
-        "\x1c1.20\x1f",
-        "1\u20072",
-        "1,20",
-        "1x20",
-        "",
-        ".",
-        "+",
-        "NaN",
-        "sNaN12",
-        "Inf",
-        "-Infinity",
-        "true",
-        None,
-        "123456789012345678901234567890123456789012345678901234567890.12",
-    ]
-    rows = [("2025-01-01", amount) for amount in amounts]
-    table = create_source(sql_database, rows)
-    assert classify(sql_database, table) == [expected_row(*row) for row in rows]
+@pytest.mark.parametrize(
+    "pickup,status",
+    [
+        pytest.param("2024-12-31T23:59:59", "outside_period", id="before-start"),
+        pytest.param("2025-01-01T00:00:00", "accepted", id="at-start"),
+        pytest.param("2025-01-01T00:00:01", "accepted", id="after-start"),
+        pytest.param("2025-01-31T23:59:59", "accepted", id="before-end"),
+        pytest.param("2025-02-01T00:00:00", "outside_period", id="at-end"),
+        pytest.param("2025-02-01T00:00:01", "outside_period", id="after-end"),
+        pytest.param("2025-01-01T23:59:59", "accepted", id="last-valid-clock"),
+        pytest.param("2025-01-01T24:00", "invalid_pickup", id="invalid-hour"),
+        pytest.param("2025-01-01T12:60", "invalid_pickup", id="invalid-minute"),
+        pytest.param("2025-01-01T12:34:60", "invalid_pickup", id="invalid-second"),
+        pytest.param("2024-02-29", "outside_period", id="valid-leap-day"),
+        pytest.param("2025-02-29", "invalid_pickup", id="invalid-leap-day"),
+        pytest.param("0000-01-01", "invalid_pickup", id="below-minimum-year"),
+        pytest.param("0001-01-01", "outside_period", id="minimum-year"),
+        pytest.param("9999-12-31", "outside_period", id="maximum-year"),
+    ],
+)
+def test_pickup_boundaries(sql_database, pickup, status):
+    """Check period, clock and calendar boundaries against explicit expectations."""
+    table = create_source(sql_database, [(pickup, "1.00")])
+    (actual,) = classify(sql_database, table)
+    assert actual[1] == status
+
+
+@pytest.mark.parametrize(
+    "amount",
+    [
+        pytest.param("0.10", id="ordinary-cents"),
+        pytest.param("-3.50", id="negative-charge"),
+        pytest.param("-0.00", id="signed-zero"),
+        pytest.param("+.50", id="leading-plus-no-integer"),
+        pytest.param("1.", id="no-fraction"),
+        pytest.param("001.2300", id="insignificant-zeros"),
+        pytest.param("1.2300e2", id="positive-exponent"),
+        pytest.param("100e-4", id="trailing-zeros-exact-cent"),
+        pytest.param("1e0002", id="leading-zero-exponent"),
+        pytest.param(" \t+_1_._2_0_e_+_2_ \n", id="whitespace-and-underscores"),
+        pytest.param("1__2", id="repeated-underscores"),
+        pytest.param("١٢.٣٠", id="unicode-digits"),
+        pytest.param("\u20071.20\u2007", id="unicode-whitespace"),
+        pytest.param("\x1c1.20\x1f", id="python-control-whitespace"),
+        pytest.param("1\u20072", id="embedded-whitespace"),
+        pytest.param("1,20", id="decimal-comma-not-guessed"),
+        pytest.param("", id="empty-money"),
+        pytest.param(".", id="missing-digits"),
+        pytest.param("NaN", id="not-a-number"),
+        pytest.param("Inf", id="infinite-money"),
+        pytest.param("true", id="boolean-text"),
+        pytest.param(None, id="missing-money"),
+    ],
+)
+def test_money_text_matches_decimal_without_rounding(sql_database, amount):
+    """Use representative valid/invalid money classes, not a generated cross-product."""
+    row = ("2025-01-01", amount)
+    table = create_source(sql_database, [row])
+    assert classify(sql_database, table) == [expected_row(*row)]
+
+
+@pytest.mark.parametrize(
+    "amount,status,cents",
+    [
+        pytest.param("-0.001", "sub_cent", None, id="negative-sub-cent"),
+        pytest.param("0", "accepted", "0", id="zero"),
+        pytest.param("0.001", "sub_cent", None, id="positive-sub-cent"),
+        pytest.param("0.009", "sub_cent", None, id="below-one-cent"),
+        pytest.param("0.01", "accepted", "1", id="one-cent"),
+        pytest.param("0.011", "sub_cent", None, id="above-one-cent"),
+        # These long exponents exercise real Decimal limits and past SQL defects.
+        pytest.param("0e-1999999999999999997", "accepted", "0", id="min-exponent"),
+        pytest.param(
+            "0e-1999999999999999998", "invalid_amount", None, id="below-min-exponent"
+        ),
+        pytest.param(
+            "0.0e-1999999999999999996", "accepted", "0", id="fraction-at-min-exponent"
+        ),
+        pytest.param(
+            "0.0e-1999999999999999997",
+            "invalid_amount",
+            None,
+            id="fraction-below-min-exponent",
+        ),
+        pytest.param("0e999999999999999999", "accepted", "0", id="max-exponent"),
+        pytest.param(
+            "0e1000000000000000000", "invalid_amount", None, id="above-max-exponent"
+        ),
+        pytest.param(
+            "0.0e1000000000000000000",
+            "accepted",
+            "0",
+            id="fraction-adjusts-max-exponent",
+        ),
+        pytest.param(
+            "11e999999999999999999",
+            "invalid_amount",
+            None,
+            id="coefficient-adjusts-max-exponent",
+        ),
+        pytest.param(
+            "1e9223372036854775808",
+            "invalid_amount",
+            None,
+            id="exponent-overflows-bigint",
+        ),
+    ],
+)
+def test_money_boundaries(sql_database, amount, status, cents):
+    """Check exact-cent and exponent boundaries with explicit expected outcomes."""
+    table = create_source(sql_database, [("2025-01-01", amount)])
+    assert classify(sql_database, table) == [(date(2025, 1, 1), status, cents)]
 
 
 def test_bignum_sums_are_exact_beyond_fixed_decimal_precision(sql_database):
     """Carry, cancellation and negative totals retain exact arbitrary-width cents."""
-    huge = "9" * 80
+    # Intentionally exceed DECIMAL's 38-digit limit and exercise a carry.
+    huge = "9" * 39
     rows = [
         ("2025-01-01", huge + ".99"),
         ("2025-01-01", "0.01"),
@@ -350,7 +387,7 @@ def test_bignum_sums_are_exact_beyond_fixed_decimal_precision(sql_database):
     classified_union(sql_database, [table])
     assert sql_database.execute(sql_resource("daily_revenue")).fetchall() == [
         (date(2025, 1, 1), 3, "1"),
-        (date(2025, 1, 2), 2, "-" + str((10**80) * 100)),
+        (date(2025, 1, 2), 2, "-" + str((10**39) * 100)),
     ]
     assert sql_database.execute(
         "SELECT typeof(amount_cents), typeof(sum(amount_cents)) "

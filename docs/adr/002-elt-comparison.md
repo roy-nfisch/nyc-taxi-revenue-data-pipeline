@@ -133,6 +133,7 @@ nyc-taxi-revenue-data-pipeline/
 │       ├── flow.py                # Prefect wrapper around the same ELT objects
 │       └── sql/                   # Include in the installed package
 │           ├── schema.sql         # Source registry and raw-storage structure
+│           ├── normalize_money.sql # Shared money-text normalization
 │           ├── classify.sql       # Apply date/amount rules in the agreed order
 │           ├── daily_revenue.sql  # Aggregate accepted rides by pickup day
 │           └── counts.sql         # Return inclusion/exclusion and amount counters

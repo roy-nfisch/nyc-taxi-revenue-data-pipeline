@@ -1,94 +1,61 @@
 # ELT SQL transformations
 
-These packaged SQL resources do not yet provide a runnable ELT command or
-warehouse executor. Execution, result conversion and checked publication still
-need to be connected.
-The source/type interface remains defined in [the contract](etl-elt-contract.md).
+These packaged queries classify rides and calculate daily revenue in DuckDB.
+They are not yet a runnable ELT pipeline. The [ETL and ELT contracts](etl-elt-contract.md)
+define the source types and shared report format.
 
-## Query boundary
+## SQL files
 
-Read each file through `importlib.resources.files("green_taxi.elt")`, then
-`joinpath("sql/classify.sql").read_text(encoding="utf-8")`. SQL is installed
-package data; execution does not depend on the terminal's working directory.
+| File | What it does |
+|---|---|
+| `normalize_money.sql` | Registers a connection-local helper for whitespace, underscores and Unicode digits. |
+| `classify.sql` | Gives each ride a date, status and exact integer-cent amount. |
+| `daily_revenue.sql` | Counts accepted rides and sums their cents by day. |
+| `counts.sql` | Counts accepted, excluded and sub-cent records. |
 
-`classify.sql` contains exactly one `__SOURCE_TABLE__` marker. The coordinator
-must validate a registered table name against `source_[0-9]{4}_(0[1-9]|1[0-2])`
-and quote the schema and table separately, for example
-`"raw"."source_2025_01"`. Never insert a filename, path or arbitrary SQL.
-The test helper demonstrates that boundary; the application executor is not yet implemented.
+Normalization is separate to keep classification readable. Its character map
+preserves Python 3.13's Unicode digit rules; it does not repair invalid money.
 
-Bind `period_start`, `period_end`, `pickup_kind` and `amount_kind` as values.
-The period is start-inclusive/end-exclusive. Derive validated kind labels from
-the original Arrow schema, not a coerced union or a guessed database value.
-Do not cast an aware timestamp to naive or a boolean amount to numeric first.
-Missing required columns fail visibly when the query is bound.
+## How to execute them
 
-Materialize each source's complete classification inside DuckDB before reading
-counters or aggregating. Its columns are `service_date DATE`, `status VARCHAR`
-and `amount_cents BIGNUM`. Retain duplicates. Combine these normalized results
-with `UNION ALL` into a relation named `classified`; do not union native raw
-columns from different sources. `daily_revenue.sql` and `counts.sql` select from
-that relation without modifying it. The tests create tiny raw tables directly
-and do not import the unfinished loader.
+Load SQL through `importlib.resources.files("green_taxi.elt").joinpath("sql/<name>.sql")`,
+not paths relative to the terminal. Execute `normalize_money.sql` once on each
+connection before classification. Its temporary macro creates no persistent data.
 
-`counts.sql` returns `COUNT_FIELDS` in their existing order, followed by
-`sub_cent`. A positive `sub_cent` must fail the run before publication, rather
-than count as excluded money. A zero `rows_used` must also fail. The coordinator
-must check both before passing facts to the shared writer. Daily results are
-`service_date`, integer `trip_count`, and exact `revenue_cents BIGNUM`.
-DuckDB 2.0.0 returns BIGNUM values as decimal strings: convert those integer
-strings to integer cents, never through a float. The SQL adds and combines
-money inside DuckDB; Python is only the result adapter.
+For each source, replace `__SOURCE_TABLE__` with a validated, quoted table name:
+`"raw"."source_2025_01"`. Allow only `source_[0-9]{4}_(0[1-9]|1[0-2])`;
+never insert arbitrary filenames or SQL. Bind `period_start`, `period_end`,
+`pickup_kind` and `amount_kind` as values. The start is included; the end is not.
+Derive the kinds from the original Arrow schema, without changing its types.
 
-## Exact parsing and operational limit
+Materialize each source's classification before checking or aggregating it.
+Combine classifications with `UNION ALL` into `classified`, preserving duplicates.
+Do not combine differently typed raw columns. The final two queries read that relation.
 
-Pickup checks precede period checks, which precede money checks. Excluded
-pickups do not enter the money parser. Text dates follow Python 3.13
-`datetime.fromisoformat` forms, including basic/week dates, one-character
-separators and fractional clocks, without accepting timezone-aware results,
-numeric epochs, guessed day/month formats or invalid calendar/clock fields.
-Week separator precedence and unusual fractional forms are tested against the
-actual CPython baseline. See the [CPython parser source](https://github.com/python/cpython/blob/3.13/Modules/_datetimemodule.c).
+Before saving, reject any `sub_cent` count or zero `rows_used`.
+`counts.sql` returns `COUNT_FIELDS` followed by `sub_cent`.
+Daily output is `service_date`, integer `trip_count` and `revenue_cents BIGNUM`.
+DuckDB returns these exact sums as integer strings; convert them to integer cents,
+never through a float.
 
-Money text follows `Decimal(str(value))`: finite values, underscore handling,
-Python whitespace, Unicode 15.1 decimal digits and scientific notation.
-Coefficient/exponent text arithmetic determines exact integer cents and detects
-sub-cents without rounding, float multiplication or a fixed DECIMAL precision.
-The Unicode table matches the project's Python 3.13 baseline and needs review
-if that baseline changes. Float32 is widened before text conversion because
-default Arrow-to-pandas conversion exposes these as Python binary64 floats.
-Pandas extension metadata can change that exposure, as noted below.
+## Rules and limits
 
-An accepted nonzero amount requiring more than **100,000 integer-cent digits**
-raises an explicit SQL resource-limit error before building an exponent-sized
-string. This operational limit is not an exclusion, rounding rule or new
-`invalid_amount` category. It prevents adversarial exponents from allocating
-unbounded memory. Exponential zero remains exact zero, very small nonzero
-values are sub-cent, and excluded pickups bypass this allocation entirely.
-Tests exercise extreme exponents without asking the ETL baseline to allocate
-astronomical integer ratios.
+- Check pickup, then reporting period, then money. Excluded pickups bypass money parsing.
+- Dates follow Python's supported ISO forms. Do not guess local formats or epochs,
+  or convert timezone-aware pickups to naive dates.
+- Money follows `Decimal(str(value))`, including scientific notation.
+  Preserve negative and zero charges; reject sub-cents rather than rounding.
+- The Unicode mapping follows Python 3.13 / Unicode 15.1. Review it if Python changes.
+- More than **100,000 integer-cent digits** raises a resource-limit error.
+  This is a failed run, not an excluded record. Exponential zero remains zero.
 
-## Known baseline representation gaps — separate fix required
+## ETL comparison
 
-These queries preserve the original raw integer exactly. They deliberately
-do not reproduce an existing ETL precision defect: pandas' default Parquet
-conversion promotes a nullable Arrow `int64` or `uint64` column to float64.
-For `[9007199254740993, null]`, ETL reports `9007199254740992.00`, while SQL
-correctly reports `9007199254740993.00`. Null rows are invalid money in both.
-The real-Parquet SQL regression asserts original exact cents. The separate
-ETL fix owns the baseline regression; SQL tests do not require the defect to persist.
+The existing ETL Parquet conversion can round large nullable integers and make
+Float32 handling depend on pandas metadata. SQL deliberately preserves the
+original values: nullable `9007199254740993` must stay exact, and Float32 `0.1`
+must not hide sub-cents.
 
-Pandas extension metadata can also change scalar strings. An Arrow float32
-`0.1` without pandas metadata becomes a Python float and is sub-cent in ETL
-and SQL. With pandas nullable `Float32` metadata, ETL sees a numpy float32
-whose string is `0.1` and accepts 10 cents; SQL still identifies the original
-float32 value as sub-cent after widening. A second real-Parquet SQL regression
-checks the original float bits with that metadata present. The separate fix
-therefore concerns the ETL's Arrow-to-pandas dtype/metadata exposure, not only
-large integers.
-
-Full ETL/ELT parity requires the ETL representation fix and comparison against
-the corrected baseline. Ordinary numeric, boolean, aware-timestamp, invalid text,
-exclusion precedence, counters, duplicate sources, exact large-money and
-sub-cent cases are compared with ETL. These dtype/metadata counterexamples
-prevent claiming universal ETL/ELT parity against the uncorrected baseline.
+A separate ETL representation fix addresses these differences. Full parity needs
+comparison against that corrected baseline. Tests cover the shared rules,
+boundaries, counters, duplicates and actual Parquet representations.
