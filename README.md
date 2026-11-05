@@ -318,7 +318,8 @@ uv run --locked python -m green_taxi.download
 
 This downloads January–March 2025 to ignored `data/raw/`. Run it again to reuse
 validated files. To choose other months, put the selection in a local JSON file,
-for example `{"months": ["2025-01"]}` in ignored `config/local/run.json` (create
+for example `{"reporting_period": {"start_month": "2025-01", "duration_months": 1}}`
+in ignored `config/local/run.json` (create
 the directory first), then run:
 
 ```bash

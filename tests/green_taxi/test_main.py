@@ -56,8 +56,8 @@ def test_bad_file_fails_without_default_fallback(tmp_path, text):
         PipelineSettings.from_file(config)
 
 
-def test_missing_file_and_missing_constructor_months(tmp_path):
-    """Direct construction requires months; an unreadable file is not ignored."""
+def test_missing_file_and_missing_constructor_selection(tmp_path):
+    """Require a period or source selection; never ignore an unreadable file."""
     with pytest.raises(FileNotFoundError):
         PipelineSettings.from_file(tmp_path / "missing.json")
     with pytest.raises(ValidationError):
