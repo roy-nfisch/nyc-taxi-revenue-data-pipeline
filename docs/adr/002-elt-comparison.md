@@ -1,8 +1,9 @@
 # Compare ETL and ELT
 
-Status: design merged in PR #11; ETL folder separation merged in PR #12.
-The optional dependency and source-registry foundation are in progress. Database
-loading and SQL business transformations are not implemented yet.
+Status: design merged in PR #11; ETL folder separation merged in PR #12;
+optional dependency and registry foundation merged in PR #13. Loading, SQL and
+Docker preparation are reviewed in separate component PRs. There is no end-to-end
+ELT command yet; TASKS.md records each component's delivery status.
 
 ## Why add this
 
@@ -210,7 +211,7 @@ Exact file boundaries can change if implementation demonstrates a simpler struct
 ## Implementation steps after approval
 
 The checklist, dependencies, file ownership and PR boundaries live in
-[T11.1–T11.7](../../TASKS.md#t11-delivery-plan), not a second checklist here.
+[the delivery plan](../../TASKS.md#t11-delivery-plan), not a second checklist here.
 
 First move the ETL modules/tests in a behaviour-preserving PR, keeping existing
 commands and outputs working. Then agree the raw representation and warehouse
