@@ -1,7 +1,8 @@
 # Compare ETL and ELT
 
-Status: design reviewed and merged in PR #11. ETL folder separation is in progress;
-no database-first ELT stages or optional dependencies have been implemented yet.
+Status: design merged in PR #11; ETL folder separation merged in PR #12.
+The optional dependency and source-registry foundation are in progress. Database
+loading and SQL business transformations are not implemented yet.
 
 ## Why add this
 
@@ -24,6 +25,11 @@ requirement for ELT.
 
 Prefect coordinates download, raw load, transform and save. It does not own the
 SQL or copy the data rules. Local Python and Docker use the same objects.
+
+The concrete raw-storage layout, warehouse operation contracts and task ownership
+are recorded in the [ETL and ELT contracts](../etl-elt-contract.md). Raw records use
+one table per source file, with original Arrow schema metadata stored in the
+source registry rather than forcing different files into one common column type.
 
 ## Data and reruns
 
@@ -78,9 +84,9 @@ before changing its existing behavior.
 
 ## Proposed technologies
 
-Only DuckDB is a proposed new runtime dependency. Keep it in an optional `elt`
-extra; the ordinary ETL installation must not need it. Select and lock a compatible
-version during implementation, not by inventing a version in this proposal.
+DuckDB is the only new runtime dependency and is installed through the optional
+`elt` extra; the ordinary ETL installation does not need it. Its version is locked
+with the rest of the project dependencies.
 
 | Technology | Existing or proposed? | Job in the ELT comparison |
 |---|---|---|
@@ -98,8 +104,9 @@ No PostgreSQL server, dbt project or new orchestration framework is proposed.
 
 ## Proposed file tree
 
-This shows the intended full layout. The ETL/shared separation is being
-implemented first; the `elt/` package and its SQL/tests/storage are not built yet.
+This shows the intended full layout. ETL/shared separation is implemented; the
+`elt/` package currently contains only the foundation registry SQL and tests.
+ELT loading, transformation, orchestration and storage are not built yet.
 ETL and ELT become sibling folders inside the same package. Shared components stay outside both;
 moving files must not duplicate their implementations or change ETL behaviour.
 Only the parts relevant to the comparison are shown.
@@ -226,11 +233,15 @@ Acceptance is equivalent checked output and safe reruns, not just a successful
 SQL query. The original reviewed files give 146,475 accepted rides, 90 daily
 facts and USD 3,395,290.56; changed files require fresh reconciliation.
 
-## Decisions for this PR
+## Design decisions
 
-- [ ] Approve DuckDB rather than PostgreSQL for the first comparison.
-- [ ] Approve plain SQL rather than adding dbt now.
-- [ ] Approve a separate optional ELT path while retaining ETL as the default.
+The design was reviewed and merged in PR #11:
 
-The first delivery step only reorganises ETL/shared code and tests. Database
-dependencies, SQL transformations, ELT images and data storage remain later tasks.
+- DuckDB rather than PostgreSQL for the first comparison.
+- Plain SQL rather than adding dbt initially.
+- A separate optional ELT path while retaining ETL as the default.
+
+The ETL folder move is merged. The current foundation adds the optional dependency,
+registry DDL and contracts only. Loading, SQL business transformations, ELT images
+and persistent data storage remain later tasks. The per-source query boundary is
+specified in the foundation contract before the parallel tasks start.

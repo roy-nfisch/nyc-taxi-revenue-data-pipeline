@@ -204,6 +204,8 @@ The Python calculator, coordinator and Prefect flow live in `green_taxi.etl`.
 Settings, downloading, report contracts and writing stay shared at package level.
 The existing commands still run ETL; `green_taxi.flow` delegates to the moved flow.
 There is no implemented ELT path yet.
+The [ETL and ELT contracts](docs/etl-elt-contract.md) define optional DuckDB setup
+and the source registry; loading and SQL transformations are still future work.
 
 ## Results and limitations
 
@@ -257,6 +259,10 @@ uv build
 | Data | An additional label for file structure and output rules, not a separate duplicate CI job. |
 
 CI runs quality checks first, then unit, integration and Docker jobs.
+The integration job installs the optional `elt` extra for registry checks; unit
+and Docker jobs keep the default ETL installation. Locally, use
+`uv run --locked --extra elt pytest -n 2 --dist loadfile` to include those checks.
+Without the extra, registry tests skip rather than requiring DuckDB for ETL.
 Integration uses two workers grouped by file. Tests use tiny synthetic inputs
 and fake HTTP responses, not public downloads. Docker checks are opt-in locally;
 the [Docker guide](docs/docker-prefect.md#retries-and-checks) explains how to run them.
@@ -272,13 +278,16 @@ nyc-taxi-revenue-data-pipeline/
 │   ├── report.py                   # Check and save the report
 │   ├── flow.py                     # Delegate for the existing Prefect command
 │   ├── __main__.py, logging.py     # Terminal entry point and logs
-│   └── etl/
-│       ├── revenue.py              # Apply rules and calculate daily totals
-│       ├── pipeline.py             # Connect the existing stage objects
-│       └── flow.py                 # Prefect tasks and flow
+│   ├── etl/
+│   │   ├── revenue.py              # Apply rules and calculate daily totals
+│   │   ├── pipeline.py             # Connect the existing stage objects
+│   │   └── flow.py                 # Prefect tasks and flow
+│   └── elt/sql/schema.sql          # Optional registry DDL; no ELT pipeline yet
 ├── tests/
 │   ├── green_taxi/                 # Shared component tests and fixtures
-│   │   └── etl/                    # Mirrors the Python ETL modules
+│   │   ├── etl/                    # Mirrors the Python ETL modules
+│   │   └── elt/                    # Optional registry contract checks
+│   ├── packaging/                  # Installed wheel, SQL resource and ETL smoke checks
 │   └── docker/                     # Image and Compose checks
 ├── notebooks/                      # Optional data exploration
 ├── docs/                           # Design, data review and run guide
@@ -312,7 +321,8 @@ its named volume rather than the host `data/` directory.
 ## Project notes
 
 - [Design decisions](docs/adr/001-pipeline-design.md): scope, data rules and object responsibilities.
-- [ELT proposal](docs/adr/002-elt-comparison.md): a separate database-first comparison, pending approval.
+- [ELT design](docs/adr/002-elt-comparison.md): a separate database-first comparison, being delivered in small steps.
+- [ETL and ELT contracts](docs/etl-elt-contract.md): existing ETL, proposed ELT and shared boundaries.
 - [Real-data review](docs/data-review.md): source identities, reconciliation and repeat-run evidence.
 - [Exploration notebook](notebooks/01-explore-green-taxi.ipynb): inspect one staged file without changing it.
 - [Docker and Prefect](docs/docker-prefect.md): configuration, storage and troubleshooting.

@@ -36,8 +36,10 @@ jobs:
         include:
           - category: unit
             workers: 0
+            extra: ""
           - category: integration
             workers: 2
+            extra: "--extra elt"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -46,9 +48,9 @@ jobs:
         with:
           version: "0.13.5"
       - run: uv python install
-      - run: uv sync --locked
+      - run: uv sync --locked ${{ matrix.extra }}
       - name: Run selected category
-        run: uv run --locked pytest tests/ -m "${{ matrix.category }}" -n ${{ matrix.workers }} --dist loadfile
+        run: uv run --locked ${{ matrix.extra }} pytest tests/ -m "${{ matrix.category }}" -n ${{ matrix.workers }} --dist loadfile
 
   docker:
     name: Docker smoke tests

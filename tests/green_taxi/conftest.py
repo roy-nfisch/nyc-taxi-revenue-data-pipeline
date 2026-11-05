@@ -1,6 +1,8 @@
 """Small real Parquet payloads and an HTTP double; no live network in tests."""
 
 import logging
+import subprocess
+import sys
 from datetime import datetime
 from unittest.mock import MagicMock
 
@@ -10,6 +12,50 @@ import pytest
 
 from green_taxi.download import TaxiDownloader
 from green_taxi.settings import PipelineSettings
+
+
+@pytest.fixture
+def check_passive_imports(tmp_path):
+    """Check named modules in a fresh process with I/O and engine imports blocked.
+
+    Shared, ETL and ELT tests select their own modules. Every check uses temporary
+    storage and fails on network access, directory creation, output or DuckDB use.
+    """
+    code = """
+import importlib
+import importlib.abc
+import sys
+from unittest.mock import patch
+import requests
+
+class BlockEngine(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split('.')[0] in {'duckdb', '_duckdb'}:
+            raise AssertionError('Import loaded the optional engine')
+
+sys.meta_path.insert(0, BlockEngine())
+with (
+    patch('requests.sessions.Session.request', side_effect=AssertionError('HTTP')),
+    patch('socket.create_connection', side_effect=AssertionError('network')),
+    patch('pathlib.Path.mkdir', side_effect=AssertionError('mkdir')),
+):
+    for name in sys.argv[1:]:
+        importlib.import_module(name)
+"""
+
+    def check(*modules):
+        result = subprocess.run(
+            [sys.executable, "-c", code, *modules],
+            cwd=tmp_path,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=True,
+        )
+        assert result.stdout == ""
+        assert list(tmp_path.iterdir()) == []
+
+    return check
 
 
 @pytest.fixture
