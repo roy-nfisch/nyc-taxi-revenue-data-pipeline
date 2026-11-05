@@ -1,8 +1,8 @@
 # ETL and ELT contracts
 
 This document distinguishes the existing Python ETL from the planned database-first
-ELT. Only optional ELT dependency setup and registry DDL exist so far; there is no
-runnable ELT pipeline.
+ELT. ELT components are delivered separately; there is no end-to-end ELT command yet.
+The task list records each component's delivery status.
 The design and delivery plan remain in [ADR 002](adr/002-elt-comparison.md) and
 [TASKS.md](../TASKS.md#t11-delivery-plan).
 

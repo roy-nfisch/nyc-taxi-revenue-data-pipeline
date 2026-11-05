@@ -1,0 +1,25 @@
+# Optional preparation tools only; the ELT pipeline is not implemented yet.
+services:
+  elt-tools:
+    init: true
+    profiles: [manual]
+    image: ${TAXI_ELT_IMAGE:-green-taxi-elt:local}
+    build:
+      context: .
+      args:
+        INSTALL_ELT: "true"
+        BUILD_REVISION: ${BUILD_REVISION:-unknown}
+        BUILD_DIRTY: ${BUILD_DIRTY:-unknown}
+    networks: [taxi-network]
+    volumes:
+      - taxi-data:/data
+    command:
+      - python
+      - -c
+      - >-
+        from importlib.resources import files;
+        import duckdb;
+        sql = files('green_taxi.elt').joinpath('sql/schema.sql').read_text();
+        print('ELT preparation: DuckDB', duckdb.__version__);
+        print('Registry SQL packaged:', bool(sql));
+        print('No ELT pipeline or database was started.')
