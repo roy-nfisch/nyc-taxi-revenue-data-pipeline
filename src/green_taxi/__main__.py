@@ -8,11 +8,8 @@ from pathlib import Path
 
 import click
 
-from green_taxi.download import TaxiDownloader
 from green_taxi.logging import configure_logging
 from green_taxi.pipeline import TaxiPipeline
-from green_taxi.report import ReportWriter
-from green_taxi.revenue import DailyRevenueCalculator
 from green_taxi.settings import PipelineSettings
 
 
@@ -51,7 +48,7 @@ def main(
 
     Without --run, creates no storage or network traffic. With --run, configures
     logging, stages inputs, and replaces reports. Runtime errors fail the command.
-    Does not start Prefect; its later flow will reuse the same objects.
+    Does not start Prefect; the separate flow reuses the same objects.
     """
     if force and not run_pipeline:
         raise click.UsageError("--force requires --run.")
@@ -63,12 +60,7 @@ def main(
         click.echo(settings.model_dump_json(indent=2))
         return
     configure_logging(settings)
-    pipeline = TaxiPipeline(
-        settings,
-        TaxiDownloader(settings),
-        DailyRevenueCalculator(settings.reporting_period),
-        ReportWriter(settings.processed_dir),
-    )
+    pipeline = TaxiPipeline.from_settings(settings)
     click.echo(str(pipeline.run(force=force)))
 
 

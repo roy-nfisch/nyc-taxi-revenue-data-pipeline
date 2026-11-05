@@ -1,13 +1,13 @@
 # Green Taxi Daily Revenue Pipeline
 
-We are planning a small, object-oriented Python **batch ETL pipeline** that turns NYC Green
+We are building a small, object-oriented Python **batch ETL pipeline** that turns NYC Green
 Taxi rides into a daily revenue report. The focus is reliable downloads, clear
 data rules, useful tests, and a process someone else can run.
 
 **Status: the local batch command downloads, calculates, and saves checked reports.**
 The [local real-data review](docs/data-review.md) reconciles 146,475 accepted rides
-and $3,395,290.56 in recorded charges across 90 days. Docker and Prefect delivery
-are still planned. The accepted
+and $3,395,290.56 in recorded charges across 90 days. Docker and Prefect execution
+are implemented for local review. The accepted
 data rules, simple OOD plan, and fact/date layout are in
 [ADR 001](docs/adr/001-pipeline-design.md). Docker and Prefect are required.
 Follow our progress in [TASKS.md](TASKS.md).
@@ -18,10 +18,10 @@ The terminal demo shows the batch results: accepted/excluded ride counts,
 daily revenue, and saved files. Select the animation to open it separately.
 
 <p align="center">
-  <a href="docs/assets/pipeline-demo.gif"><img src="docs/assets/pipeline-demo.gif" width="640" alt="Taxi pipeline run showing accepted rides, daily revenue, and saved reports"></a>
+  <a href="docs/assets/pipeline-demo.gif"><img src="docs/assets/pipeline-demo.gif" width="620" alt="Taxi pipeline run showing accepted rides, daily revenue, and saved reports"></a>
 </p>
 
-Compressed GIF, about 62 KB. The terminal title, prompt, and local paths are cropped.
+Compressed GIF, about 55 KB. The terminal title, prompt, local paths, and scrollbar are cropped.
 The recording used a temporary summary script; the supported batch command is:
 
 ```bash
@@ -92,9 +92,9 @@ records are invalid, and processing runs again.
 - Run the shared Python objects through Prefect inside Docker.
 - Check calculations, failure handling, and repeat runs with automated tests.
 
-These are our goals, not claims of completed functionality.
+See TASKS.md for reviewed milestones and work awaiting approval.
 
-## Planned flow
+## Batch flow
 
 ```mermaid
 flowchart LR
@@ -110,7 +110,7 @@ finished report into output files. A database is not needed. It is **batch
 processing** because each run handles a fixed set of monthly files and finishes;
 it does not continuously process arriving events.
 
-Runs will be started manually through Prefect in Docker, with no automatic
+Start runs manually through Prefect in Docker, with no automatic
 schedule initially. Rebuilding with the same inputs and rules must reproduce
 the reporting tables without doubling the results.
 
@@ -131,7 +131,7 @@ for the agreed lineage fields and launch behaviour.
 
 ## Technology choices
 
-| Technology | Why we plan to use it |
+| Technology | Why we use it |
 |---|---|
 | Python, pandas, and PyArrow | Read Parquet and calculate daily totals using tools already in the project. |
 | Requests | Download source files with explicit timeouts and HTTP error handling. |
@@ -151,6 +151,8 @@ execution from the start, not add a separate container-only implementation.
 src/green_taxi/       Pipeline objects, configuration, and commands
 tests/               Mirrored tests and shared fixtures
 docs/                Design decisions, data review, and demo media
+Dockerfile           Non-root image for the batch and local Prefect server
+compose.yaml         Project network, persistent volumes, and manual run services
 .github/workflows/   Automated checks
 solution/            Supplied reference; remove before public release
 README.md            Project overview and run instructions
@@ -160,7 +162,8 @@ uv.lock              Locked dependency versions
 ```
 
 `TaxiPipeline` connects the downloader, calculator, and `ReportWriter`; each keeps
-its own responsibility. Docker and Prefect delivery remain planned.
+its own responsibility. The Prefect flow reuses these objects and the same
+lineage/publication methods; it does not copy the calculation rules.
 
 ## Setup
 
@@ -273,6 +276,20 @@ job to avoid worker-startup overhead. Reference tests run once in the checks job
 A three-run local comparison measured integration wall time around 0.96 seconds
 serial and 0.93 seconds with two workers: effectively similar at this small size,
 not evidence of a substantial speedup. These are local measurements, not CI promises.
+
+### Docker and Prefect
+
+```bash
+docker compose up --build -d --wait prefect
+docker compose run --rm flow
+```
+
+Open **http://127.0.0.1:4205** to see completed flow/task runs. Container data lives
+in named volumes, separate from host `./data`. Plain Python also runs in the image:
+`docker compose run --rm --no-deps pipeline`. Run one batch at a time.
+
+See [Docker and Prefect](docs/docker-prefect.md) for ports, retries, storage,
+inspection, tests, and safe stop/restart commands.
 
 ### Download the raw files
 

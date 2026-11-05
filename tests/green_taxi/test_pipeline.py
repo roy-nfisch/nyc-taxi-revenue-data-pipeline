@@ -62,7 +62,7 @@ def test_cli_runs_existing_stages_and_force_refresh(pipeline_setup, monkeypatch)
     assert result.exit_code == 0, result.output
     assert str(pipeline.settings.processed_dir / "metadata.json") in result.output
     monkeypatch.setattr(
-        "green_taxi.__main__.TaxiDownloader", lambda settings: pipeline.downloader
+        "green_taxi.pipeline.TaxiDownloader", lambda settings: pipeline.downloader
     )
     refreshed = CliRunner().invoke(main, ["--config", str(config), "--run", "--force"])
     assert refreshed.exit_code == 0, refreshed.output

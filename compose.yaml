@@ -1,0 +1,53 @@
+name: green-taxi
+
+x-runtime: &runtime
+  init: true
+  image: green-taxi:local
+  build: .
+  networks: [taxi-network]
+
+services:
+  prefect:
+    <<: *runtime
+    command: [prefect, server, start, --host, "0.0.0.0", --port, "4200"]
+    ports:
+      - "127.0.0.1:${PREFECT_PORT:-4205}:4200"
+    environment:
+      PREFECT_SERVER_UI_API_URL: "http://127.0.0.1:${PREFECT_PORT:-4205}/api"
+      PREFECT_SERVER_ANALYTICS_ENABLED: "false"
+    volumes:
+      - prefect-state:/home/app/.prefect
+    healthcheck:
+      test: [CMD, /app/.venv/bin/python, -c, "from urllib.request import urlopen; urlopen('http://127.0.0.1:4200/api/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      start_period: 45s
+      retries: 12
+
+  pipeline:
+    <<: *runtime
+    profiles: [manual]
+    volumes:
+      - taxi-data:/data
+
+  flow:
+    <<: *runtime
+    profiles: [manual]
+    command: [python, -m, green_taxi.flow, --data-dir, /data]
+    environment:
+      PREFECT_API_URL: http://prefect:4200/api
+      PREFECT_UI_URL: "http://127.0.0.1:${PREFECT_PORT:-4205}"
+      PREFECT_SERVER_ALLOW_EPHEMERAL_MODE: "false"
+    depends_on:
+      prefect:
+        condition: service_healthy
+    volumes:
+      - taxi-data:/data
+
+volumes:
+  taxi-data:
+  prefect-state:
+
+networks:
+  taxi-network:
+    driver: bridge
