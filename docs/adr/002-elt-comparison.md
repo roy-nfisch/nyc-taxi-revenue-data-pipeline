@@ -97,15 +97,25 @@ No PostgreSQL server, dbt project or new orchestration framework is proposed.
 
 ## Proposed file tree
 
-This is the intended layout, not files already implemented. Show only the parts
-relevant to the comparison; existing ETL modules and tests remain in place.
+This is the intended layout, not files already implemented. ETL and ELT become
+sibling folders inside the same package. Shared components stay outside both;
+moving files must not duplicate their implementations or change ETL behaviour.
+Only the parts relevant to the comparison are shown.
 
 ```text
 nyc-taxi-revenue-data-pipeline/
 ├── src/green_taxi/
 │   ├── settings.py, download.py    # Reuse validated settings and checked downloads
-│   ├── report.py, revenue.py      # Reuse writer, result contract and calendar helper
-│   ├── pipeline.py, flow.py       # Existing ETL remains the default
+│   ├── report.py                 # Shared checked report writer
+│   ├── reporting.py              # Shared result, calendar and exact-money helpers
+│   ├── logging.py                # Shared application logging
+│   ├── __main__.py               # Existing command; still runs ETL by default
+│   ├── flow.py                   # Thin delegate for the existing Prefect command
+│   ├── etl/                      # Move the existing Python path here
+│   │   ├── __init__.py
+│   │   ├── revenue.py            # Python calculator and ETL-specific row handling
+│   │   ├── pipeline.py           # Existing ETL coordinator
+│   │   └── flow.py               # Existing ETL Prefect flow
 │   └── elt/                      # New, optional ELT path
 │       ├── __init__.py            # No database work or DuckDB import on package import
 │       ├── __main__.py            # Thin manual ELT entry point
@@ -120,9 +130,19 @@ nyc-taxi-revenue-data-pipeline/
 ├── tests/
 │   ├── green_taxi/
 │   │   ├── conftest.py            # Reuse existing tiny inputs and fake downloads
+│   │   ├── test_settings.py       # Shared component tests stay at this level
+│   │   ├── test_download.py
+│   │   ├── test_report.py
+│   │   ├── test_reporting.py      # Shared result, calendar and money-helper checks
+│   │   ├── test_parity.py         # Compare ETL and ELT using the same inputs
+│   │   ├── etl/                  # Move existing ETL-specific tests; retain coverage
+│   │   │   ├── test_revenue.py
+│   │   │   ├── test_revenue_files.py
+│   │   │   ├── test_pipeline.py
+│   │   │   └── test_flow.py       # Includes existing runtime/retry checks
 │   │   └── elt/                  # Mirror the new source modules
 │   │       ├── test_warehouse.py  # Lossless loading, changed sources and rollback
-│   │       ├── test_pipeline.py   # ETL parity, writer contract and safe reruns
+│   │       ├── test_pipeline.py   # Writer contract and safe ELT reruns
 │   │       ├── test_main.py       # Optional command and installed SQL resources
 │   │       └── test_flow.py       # Stage order and failure propagation
 │   └── docker/
@@ -140,23 +160,25 @@ nyc-taxi-revenue-data-pipeline/
 
 ## How the ETL and ELT files connect
 
-The `elt/` folder extends the existing package; it is not a second project.
-Both paths share the inputs and output contract. The transformation engine changes.
+The `etl/` and `elt/` folders are two paths in one project, not copies of the
+shared components. Both paths share the inputs and output contract; the
+transformation engine changes.
 Paths below are relative to `src/green_taxi/`.
 
-| Existing file | Connection to the proposed ELT path |
-|---|---|
-| `settings.py` | Reuse the reporting period and settings validation. |
-| `download.py` | Reuse the downloader and unchanged staged Parquet files. |
-| `revenue.py` | ETL keeps its Python calculator. ELT reuses `RevenueResult` and the calendar helper, not the calculator. |
-| `report.py` | Reuse output checks and report writing, with separate destinations. |
-| `pipeline.py` | Keeps coordinating ETL. New `elt/pipeline.py` coordinates database loading, SQL transformation and publication. |
-| `flow.py` | Keeps the ETL Prefect flow. New `elt/flow.py` coordinates the ELT objects. |
+| Existing file | Proposed location | Connection between ETL and ELT |
+|---|---|---|
+| `settings.py` | Unchanged | Shared reporting period and settings validation. |
+| `download.py` | Unchanged | Shared downloader and unchanged staged Parquet files. |
+| `revenue.py` | `etl/revenue.py` and shared `reporting.py` | The Python calculator stays ETL-only. Move the result contract, calendar and helpers needed by the writer into the shared module. |
+| `report.py` | Unchanged | Shared output checks and report writing, with separate destinations. |
+| `pipeline.py` | `etl/pipeline.py` | Coordinates ETL; the separate `elt/pipeline.py` coordinates ELT. |
+| `flow.py` | `etl/flow.py`, with a thin root delegate | Wraps ETL; the separate `elt/flow.py` wraps ELT. Keep `python -m green_taxi.flow` working for existing Compose commands. |
+| `__main__.py` | Unchanged | Keeps the existing command and ETL default; it delegates to the moved ETL coordinator. |
 
 ```mermaid
 flowchart TD
     D["Shared: download.py"] --> R["Shared inputs: data/raw/"]
-    R --> E["ETL: revenue.py Python calculator"]
+    R --> E["ETL: etl/revenue.py Python calculator"]
     R --> L["ELT: elt/warehouse.py loads DuckDB and runs SQL"]
     E --> W["Shared code: report.py checks and writes RevenueResult"]
     L --> W
@@ -171,25 +193,32 @@ ETL/ELT conditionals throughout the existing pipeline.
 
 The warehouse returns `RevenueResult` without recalculating revenue in Python.
 SQL files do not need matching Python classes or a separate SQL framework.
-Existing ETL tests remain; new tests mirror `elt/`, reuse existing fixtures and
-compare the two paths' reports rather than copy the whole ETL test suite.
+Keep all existing ETL coverage while moving its tests to mirror `etl/`. Shared
+component tests remain at package level. New tests mirror `elt/`, reuse existing
+fixtures, and use `test_parity.py` for comparisons rather than copy the ETL suite.
 Exact file boundaries can change if implementation demonstrates a simpler structure.
 
 ## Implementation steps after approval
 
-1. Add DuckDB as an explicit optional dependency; keep ETL runnable without it.
-2. Implement transactional raw loading and source identity tracking with tiny
+1. Make a separate, behaviour-preserving change to move ETL-specific modules and
+   tests into `etl/` and extract the shared reporting contracts/helpers. Update
+   imports, packaging, CI paths and documentation where affected. Keep existing
+   documented commands, Docker/Compose behaviour and outputs working; use thin
+   delegates for existing module entry points where needed. Verify the ETL
+   baseline before adding DuckDB or implementing ELT.
+2. Add DuckDB as an explicit optional dependency; keep ETL runnable without it.
+3. Implement transactional raw loading and source identity tracking with tiny
    fixtures, including unchanged, changed and failed loads.
-3. Implement SQL transformation and output conversion. Compare every date,
+4. Implement SQL transformation and output conversion. Compare every date,
    ride count, exact amount, exclusion count and date reference with ETL.
    Return the existing writer's expected types, including finite Decimal money,
    Python integer counters and the same date-dimension contract.
-4. Add a separate manual Python/Prefect entry point and Docker instructions.
+5. Add a separate manual Python/Prefect entry point and Docker instructions.
    Keep the current default command and published ETL image behavior unchanged.
    Verify ELT from an installed package and a built container, with the optional
    DuckDB dependency and named SQL files included. Also verify ordinary ETL
    without that optional dependency; a checkout-only run is not sufficient.
-5. Run both paths on the same real January–March source bytes, repeat them, and
+6. Run both paths on the same real January–March source bytes, repeat them, and
    document equal results plus the extra storage and complexity ELT introduces.
 
 Acceptance is equivalent checked output and safe reruns, not just a successful
