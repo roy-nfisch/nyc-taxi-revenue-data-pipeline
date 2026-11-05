@@ -207,7 +207,7 @@ ELT components are delivered separately; there is no end-to-end ELT command yet.
 The [task list](TASKS.md#t11-delivery-plan) records each component's delivery status.
 The [ETL and ELT contracts](docs/etl-elt-contract.md) define optional DuckDB setup
 and the source registry, loading and SQL transformation boundaries.
-The [optional ELT Docker preparation](docs/elt-docker.md) installs the engine and
+The [ELT Docker image](docs/elt-docker.md) installs the engine and
 packaged SQL separately, without changing the default ETL image or starting a server.
 
 ## Results and limitations
@@ -329,7 +329,7 @@ its named volume rather than the host `data/` directory.
 - [Real-data review](docs/data-review.md): source identities, reconciliation and repeat-run evidence.
 - [Exploration notebook](notebooks/01-explore-green-taxi.ipynb): inspect one staged file without changing it.
 - [Docker and Prefect](docs/docker-prefect.md): configuration, storage and troubleshooting.
-- [ELT Docker preparation](docs/elt-docker.md): optional dependency/resource checks, not a runnable ELT pipeline.
+- [ELT Docker image](docs/elt-docker.md): engine and packaged SQL checks, not a runnable ELT pipeline.
 - [Image publishing](docs/docker-prefect.md#publish-to-ghcr): manual release steps and approval gates.
 - [Task list](TASKS.md): reviewed work and planned follow-ups.
 

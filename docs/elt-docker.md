@@ -1,12 +1,14 @@
-# Optional ELT Docker preparation
+# ELT Docker image
 
-This is delivery preparation for T11.5, not a runnable ELT pipeline. It checks
-the optional DuckDB engine and installed SQL resources only. Loading, SQL
-transformations, reports and the ELT command/Prefect flow are connected and
-verified in T11.6. See the [contracts](etl-elt-contract.md) and
-[delivery plan](../TASKS.md#t11-delivery-plan).
+The ELT image includes DuckDB and the packaged SQL resources. The default ETL
+image does not include DuckDB and keeps its existing behaviour.
 
-## Build and inspect the optional image
+The commands below check the engine and SQL resources only; they do not run an
+ELT pipeline. Connecting loading, transformations, reports and the ELT command
+and Prefect flow remains planned work. See the [contracts](etl-elt-contract.md)
+and [delivery plan](../TASKS.md#t11-delivery-plan).
+
+## Build and inspect the ELT image
 
 From the repository root, with Docker running:
 
@@ -52,7 +54,8 @@ confirm the default ETL image does not install DuckDB. Container probes use
 image names shown above, independent of custom deployment image names.
 
 The regular Docker CI job builds both variants and runs all Docker checks.
-The manual ETL release workflow also builds the optional image **for verification
+The manual ETL release workflow also builds the ELT image **for verification
 only** because it runs the same tests. It still saves and publishes only the
 tested default ETL image; no ELT image/tag is uploaded or substituted for ETL
-`latest`. ELT publication remains a separate approved T11.7 action after T11.6.
+`latest`. Publishing the ELT image needs separate approval after the complete
+ELT pipeline has been connected and verified.

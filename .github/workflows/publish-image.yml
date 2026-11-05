@@ -66,7 +66,7 @@ jobs:
             --build-arg "BUILD_REVISION=$GITHUB_SHA" --build-arg BUILD_DIRTY=false \
             --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" .
-      - name: Build optional ELT image for verification only
+      - name: Build ELT image
         env:
           BUILD_REVISION: ${{ github.sha }}
           BUILD_DIRTY: "false"

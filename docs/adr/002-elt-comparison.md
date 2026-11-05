@@ -211,7 +211,7 @@ Exact file boundaries can change if implementation demonstrates a simpler struct
 ## Implementation steps after approval
 
 The checklist, dependencies, file ownership and PR boundaries live in
-[T11.1–T11.7](../../TASKS.md#t11-delivery-plan), not a second checklist here.
+[the delivery plan](../../TASKS.md#t11-delivery-plan), not a second checklist here.
 
 First move the ETL modules/tests in a behaviour-preserving PR, keeping existing
 commands and outputs working. Then agree the raw representation and warehouse
