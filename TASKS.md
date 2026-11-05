@@ -323,7 +323,10 @@ and dotenv contract checks passed in the final Docker CI job.
 
 ## Optional follow-up — not a release requirement
 
-- [ ] **T11 — Explore an ELT version.** Keep the checked ETL implementation as
+- [ ] **T11 — Explore an ELT version.** Design proposed for review in
+  [ADR 002](docs/adr/002-elt-comparison.md): DuckDB, plain SQL, transactional raw
+  loading and a separate optional execution path. No implementation until the
+  database and approach are approved. Keep the checked ETL implementation as
   the comparison baseline; this task does not block T07/T10 or public release.
   - Agree on a short ADR before implementation. Choose one local analytical
     database (DuckDB or PostgreSQL), not two implementations.
@@ -340,6 +343,10 @@ and dotenv contract checks passed in the final Docker CI job.
     keep the code simple and OOD first.
   Done when an ELT run is reproducible and equivalent under the agreed rules,
   with a clear explanation of when the extra database/SQL layer is worthwhile.
+  GPT-6 Astra reviewed the proposal. Clarified source-scoped reruns, failure
+  propagation, exact exclusion order and separate baseline/comparison outputs.
+  This is a design-only change; no database, dependencies or pipeline behavior
+  have changed. Implementation waits for owner approval of ADR 002.
 
 ## Working agreement
 
