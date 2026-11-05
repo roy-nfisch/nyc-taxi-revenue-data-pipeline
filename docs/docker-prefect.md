@@ -4,6 +4,11 @@ Docker packages our existing Python application. Prefect adds task states and
 bounded download retries; it does not replace the data rules. Both entry points
 reuse `TaxiPipeline.from_settings()` and the same downloader/calculator/writer.
 
+The stage implementations live in `src/green_taxi/etl/`. The existing
+`python -m green_taxi.flow` command is a thin delegate to that flow, so Compose
+commands and server settings are unchanged. This guide still runs Python ETL,
+not the proposed database-first ELT path.
+
 ## Start and run
 
 Run all commands in this guide in your **Mac/host terminal**, from the repository

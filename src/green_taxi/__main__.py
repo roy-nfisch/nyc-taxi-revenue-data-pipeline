@@ -8,8 +8,8 @@ from pathlib import Path
 
 import click
 
+from green_taxi.etl.pipeline import TaxiPipeline
 from green_taxi.logging import configure_logging
-from green_taxi.pipeline import TaxiPipeline
 from green_taxi.settings import PipelineSettings
 
 

@@ -10,7 +10,7 @@ from tempfile import TemporaryDirectory
 import pandas as pd
 from pandas.testing import assert_frame_equal
 
-from green_taxi.revenue import (
+from green_taxi.reporting import (
     COUNT_FIELDS,
     RevenueResult,
     build_date_dimension,

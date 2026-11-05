@@ -9,7 +9,7 @@ import pytest
 import requests
 from click.testing import CliRunner
 
-from green_taxi.flow import main, retry_download, save_report, taxi_flow
+from green_taxi.etl.flow import main, retry_download, save_report, taxi_flow
 from green_taxi.settings import ReportingPeriod
 
 pytestmark = pytest.mark.unit
@@ -65,7 +65,7 @@ def test_flow_cli_requires_explicit_server(monkeypatch):
 
 def test_flow_delegates_in_order_without_copying_rules(monkeypatch, tmp_path):
     """Exercise the flow body with task doubles; orchestration adds no calculation."""
-    import green_taxi.flow as module
+    import green_taxi.etl.flow as module
 
     calls = []
     pipeline = MagicMock()
@@ -91,7 +91,7 @@ def test_flow_cli_passes_config_storage_and_refresh(monkeypatch, tmp_path):
     config.write_text("{}")
     monkeypatch.setenv("PREFECT_API_URL", "http://127.0.0.1:4205/api")
     run = MagicMock(return_value="metadata.json")
-    monkeypatch.setattr("green_taxi.flow.taxi_flow", run)
+    monkeypatch.setattr("green_taxi.etl.flow.taxi_flow", run)
     result = CliRunner().invoke(
         main, ["--config", str(config), "--data-dir", str(tmp_path), "--force"]
     )
@@ -108,7 +108,7 @@ def test_save_summary_is_logged_only_after_success(monkeypatch, fails):
     )
     pipeline.save.return_value = Path("metadata.json")
     logger = MagicMock()
-    monkeypatch.setattr("green_taxi.flow.get_run_logger", lambda: logger)
+    monkeypatch.setattr("green_taxi.etl.flow.get_run_logger", lambda: logger)
     result = SimpleNamespace(
         counts={"rows_used": 2}, facts=[None], total_amount=Decimal("1.25")
     )

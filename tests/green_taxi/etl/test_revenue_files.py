@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
 
-from green_taxi.revenue import DailyRevenueCalculator
+from green_taxi.etl.revenue import DailyRevenueCalculator
 
 pytestmark = [pytest.mark.integration, pytest.mark.data]
 

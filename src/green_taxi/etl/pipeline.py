@@ -8,11 +8,12 @@ from pathlib import Path
 from uuid import uuid4
 
 from green_taxi.download import StagedFile, TaxiDownloader
+from green_taxi.etl.revenue import DailyRevenueCalculator
 from green_taxi.report import ReportWriter
-from green_taxi.revenue import DailyRevenueCalculator, RevenueResult
+from green_taxi.reporting import RevenueResult
 from green_taxi.settings import PipelineSettings
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("green_taxi.pipeline")
 
 
 def code_identity() -> dict:
@@ -22,7 +23,7 @@ def code_identity() -> dict:
     Installed wheels report supplied build metadata, or explicit unknowns. Git calls are
     bounded and read-only; unavailable Git does not prevent data processing.
     """
-    root = Path(__file__).resolve().parents[2]
+    root = Path(__file__).resolve().parents[3]
     unknown = {"revision": "unknown", "dirty": "unknown"}
     if not (root / ".git").exists():
         dirty = {"true": True, "false": False}.get(
