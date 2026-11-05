@@ -71,6 +71,11 @@ jobs:
         env:
           BUILD_REVISION: ${{ github.sha }}
           BUILD_DIRTY: "false"
+      - name: Build ELT image
+        run: docker compose -f compose.yaml -f compose.elt.yaml build elt-tools
+        env:
+          BUILD_REVISION: ${{ github.sha }}
+          BUILD_DIRTY: "false"
       - run: uv run --locked pytest tests/docker/ -q
         env:
           GREEN_TAXI_DOCKER_TESTS: "1"

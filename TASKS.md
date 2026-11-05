@@ -371,14 +371,16 @@ not completed work or permission to publish.
   was excluded by the owner. The merged PR's quality, unit, integration and Docker
   jobs all passed; Docker verification was performed in GitHub Actions, not locally.
 
-- [ ] **T11.2 — Define the ELT foundation.** Depends on merged T11.1. Agree the
+- [x] **T11.2 — Define the ELT foundation.** Reviewed and merged in
+  [PR #13](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/pull/13)
+  at `7aadb93`. Depends on merged T11.1. Agree the
   lossless raw representation, source identity/registry schema, warehouse method
   inputs/results and storage paths before parallel work. Add the optional `elt`
   dependency and SQL resource packaging. **PR boundary:** shared contracts,
   dependency/packaging setup and focused checks, not loading or business SQL.
   Done when the parallel tasks can use the same contracts and ETL still runs
   without DuckDB. Avoid placeholder methods or a generic backend abstraction.
-  In progress: the [ETL and ELT contracts](docs/etl-elt-contract.md) define one raw
+  Completed: the [ETL and ELT contracts](docs/etl-elt-contract.md) define one raw
   table per source, serialized Arrow schema metadata, source-scoped identity,
   storage paths and future warehouse operations. DuckDB 2.0.0 is locked behind
   the `elt` extra; registry DDL is package data. Focused checks cover registry
@@ -394,8 +396,8 @@ not completed work or permission to publish.
   Import checks are separated into shared, ETL and ELT tests, reusing one passive-
   import fixture. The default-installation run confirms DuckDB is absent.
   Review fixes define per-source SQL type labels and classified result columns
-  before parallel work. Initial PR #13 CI passed all jobs; the review-fix commit
-  needs a fresh CI run. Owner approval remains pending before marking this done.
+  before parallel work. PR #13, including its review fixes, is merged; T11.3–T11.5
+  start from that shared foundation.
 
 - [ ] **T11.3 — Build raw loading.** Depends on merged T11.2. Implement the small
   warehouse object, source registry and transactional source replacement. Preserve
@@ -403,6 +405,20 @@ not completed work or permission to publish.
   **PR boundary:** `elt/warehouse.py`, raw schema/registry SQL and loading tests.
   Done when tiny inputs cover unchanged/changed sources, equal bytes in different
   sources, mixed required-column types and rollback without partial publication.
+  Ready for review: `TaxiWarehouse` owns its context-bounded optional connection,
+  checked source identities and per-source replacement transactions. Original
+  Arrow schemas stay in the registry; scalar mappings must pass full native
+  value round trips before commit. Duplicate rows, boolean amounts and aware
+  nanosecond pickups are preserved. Unsupported or lossy schemas fail explicitly.
+  [Loading notes](docs/elt-loading.md) describe supported mappings, failure/reuse
+  semantics and the one-file memory limit. Focused tests cover unchanged/changed
+  sources, equal bytes under distinct filenames, staged-byte changes, mixed
+  types, schema metadata, persistent timestamps and rollback. No calculation
+  placeholder, ETL behavior change or local Docker execution is included.
+  Local Python verification: 316 tests passed, including existing Prefect runtime
+  and installed-wheel checks. Ruff lint/format passed for `src`, `tests` and
+  `.github/scripts`; the focused ELT suite includes 50 passing tests. Independent
+  review and CI remain pending; this task is not marked complete.
 
 - [ ] **T11.4 — Build SQL transformations.** Depends on merged T11.2; may run
   alongside T11.3. Implement classification, daily aggregation and counters using
@@ -424,6 +440,20 @@ not completed work or permission to publish.
   implement pipeline stages. Done when the optional dependency/resources work
   from an installed package/container and default ETL remains usable without
   DuckDB. Full ELT execution is verified in T11.6, not claimed here.
+  In progress: explicit `INSTALL_ELT=true` build support and a separate manual
+  `compose.elt.yaml` preparation service install DuckDB and packaged registry SQL.
+  The default image stays ETL-only; no ports, Prefect dependency or ELT pipeline
+  command are added. Delivery CI builds both variants and checks Compose isolation,
+  non-root in-memory SQL execution and DuckDB's absence from the default image.
+  The release workflow builds the optional variant only for verification and
+  still archives/publishes the default ETL image alone. The
+  [preparation guide](docs/elt-docker.md) distinguishes these checks from future
+  T11.6 execution and T11.7 publication.
+  Local verification: both image builds passed; 17 isolated Docker checks passed
+  without starting Prefect or downloading public data. The optional Python
+  installation passed 277 tests; Ruff lint/format and the package build passed.
+  The existing full Compose server/flow check remains for CI, not claimed as
+  locally verified. Review and owner approval are pending before completion.
 
 - [ ] **T11.6 — Connect and verify.** Depends on merged T11.3, T11.4 and T11.5.
   Connect the ELT coordinator, manual entry point, Prefect stages and conversion

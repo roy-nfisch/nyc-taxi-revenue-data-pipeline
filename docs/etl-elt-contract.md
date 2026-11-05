@@ -1,8 +1,8 @@
 # ETL and ELT contracts
 
 This document distinguishes the existing Python ETL from the planned database-first
-ELT. Only optional ELT dependency setup and registry DDL exist so far; there is no
-runnable ELT pipeline.
+ELT. Raw loading and transformation SQL are available as separate components;
+there is no end-to-end ELT command yet.
 The design is described in [ADR 002](adr/002-elt-comparison.md).
 
 | | ETL — implemented | ELT — proposed |

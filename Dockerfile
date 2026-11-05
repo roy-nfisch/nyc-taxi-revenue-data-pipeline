@@ -2,6 +2,7 @@ FROM ghcr.io/astral-sh/uv:0.13.5 AS uv
 FROM python:3.13.17-slim
 ARG BUILD_REVISION=unknown
 ARG BUILD_DIRTY=unknown
+ARG INSTALL_ELT=false
 LABEL org.opencontainers.image.revision=$BUILD_REVISION
 
 COPY --from=uv /uv /usr/local/bin/uv
@@ -15,7 +16,11 @@ ENV UV_PYTHON_DOWNLOADS=never \
 WORKDIR /app
 COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY src/ ./src/
-RUN uv sync --locked --no-dev --no-editable \
+RUN case "$INSTALL_ELT" in \
+      true) uv sync --locked --no-dev --no-editable --extra elt ;; \
+      false) uv sync --locked --no-dev --no-editable ;; \
+      *) echo 'INSTALL_ELT must be true or false' >&2; exit 2 ;; \
+    esac \
     && groupadd --gid 10001 app \
     && useradd --uid 10001 --gid app --create-home app \
     && mkdir -p /data /home/app/.prefect /home/app/ui \
