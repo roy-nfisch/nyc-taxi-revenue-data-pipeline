@@ -463,6 +463,20 @@ T11.1 → T11.2 → T11.3 / T11.4 / T11.5 in parallel → T11.6 → T11.7.
   T11.6 then connects and verifies the combined work; do not defer all testing
   until integration or publish merely because the image builds.
 
+## Follow-up — project clarity
+
+- [ ] **T12 — Make the project easier to follow.** Refine the README and linked
+  explanations so a new reader can understand the pipeline before its internals.
+  - Show the ETL and ELT paths in a small diagram, with plain stage names.
+  - Follow one ride into a daily total to explain what the calculations do.
+  - Give one recommended run command per path and show where to find the result;
+    keep Docker, Prefect and configuration alternatives in the linked guides.
+  - Explain the main objects by their jobs, without requiring readers to learn
+    every helper first. Keep the existing data rules and reliability checks.
+  Done when a new reader can explain the stage order, run either path and locate
+  its output without guessing. Reuse existing diagrams and examples; remove
+  repetition rather than adding another guide. No architecture rewrite required.
+
 ## Working agreement
 
 - OOD first: small objects with one job, connected through composition.
