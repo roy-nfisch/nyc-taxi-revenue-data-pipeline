@@ -13,8 +13,8 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
 ## Current status
 
 ETL and ELT implementation, verification and landing-page work are merged.
-The portfolio entry is complete. The ELT image is published and its public
-access and fresh run are verified; release documentation awaits review.
+The portfolio entry is complete. The ELT image is published, its public access
+and fresh run are verified, and release documentation is merged in PR #22.
 T12's documentation and code clarity improvements were reviewed and merged in
 PR #21. Python checks passed; Docker verification was excluded from that local review.
 Earlier verification notes below describe checks at the time of each task.
@@ -464,7 +464,7 @@ work; implementing a workflow is not permission to publish.
   passed its full tests and published-image checks. An anonymous pull succeeded;
   a fresh run as UID 10001 produced 146,475 accepted rides, 90 daily facts and
   USD 3,395,290.56. The image digest and commands are recorded in the Docker guide.
-  No service was deployed. Release documentation remains uncommitted for review.
+  No service was deployed. Release documentation was merged in PR #22.
 
 - [x] **T11.8 — Explain ETL and ELT on the project landing page.** Added a
   pipeline diagram and updated the README's commands, results and overview.
