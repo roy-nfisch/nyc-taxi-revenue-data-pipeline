@@ -2,7 +2,7 @@
 
 ETL and ELT share one package and report contract. The database-first path uses
 checked raw loading, exact SQL transformations and its own output directory.
-See [running ELT](../elt-runtime.md) for the Python, Docker and Prefect commands.
+See [running ELT](../elt.md) for the Python, Docker and Prefect commands.
 
 ## Why add this
 
@@ -27,7 +27,7 @@ Prefect coordinates download, raw load, transform and save. It does not own the
 SQL or copy the data rules. Local Python and Docker use the same objects.
 
 The concrete raw-storage layout, warehouse operation contracts and responsibilities
-are recorded in the [ETL and ELT contracts](../etl-elt-contract.md). Raw records use
+are recorded in the [ELT guide](../elt.md). Raw records use
 one table per source file, with original Arrow schema metadata stored in the
 source registry rather than forcing different files into one common column type.
 
@@ -237,3 +237,29 @@ The design was reviewed and merged in PR #11:
 The per-source query boundary is specified in the shared contract. A separate
 ELT coordinator connects loading, SQL and publication without changing the
 default ETL command or its storage.
+
+## Storage and SQL interface
+
+The loader creates one native `raw.source_YYYY_MM` table per selected file.
+`loaded_sources` keeps filename, table name, SHA-256, byte size, row count and
+serialized Arrow schema. Identity is source-scoped; equal bytes under distinct
+valid filenames remain distinct sources. Only the loader updates the registry.
+Raw values and type distinctions must round-trip without loss, including
+booleans, timezone awareness, nanosecond timestamps and floating-point bits.
+Required pickup types are date, timestamp, numeric, text, boolean or null;
+amount types are numeric, text, boolean or null. Other raw scalar columns are
+verified too; nested/dictionary/extension/decimal256/time/duration types are unsupported.
+
+The warehouse validates and quotes raw table identifiers. SQL resources are
+installed package data, read through `importlib.resources`, not the current directory.
+Bind `period_start`, `period_end`, `pickup_kind` and `amount_kind` separately.
+Kind labels describe original Arrow types, not values guessed after conversion.
+
+Classification returns `service_date DATE`, `status VARCHAR` and exact
+`amount_cents BIGNUM`. Status is accepted, invalid_pickup, outside_period,
+invalid_amount or sub_cent. Preserve that exclusion order; any in-period sub-cent
+fails the run rather than becoming an exclusion. Combine only normalized
+classifications, retaining every row. Counters return `COUNT_FIELDS` plus
+`sub_cent`; zero accepted rows also fail. SQL owns all revenue aggregation.
+The result adapter converts integer strings without floats, builds the shared
+calendar and returns `RevenueResult`. It never publishes files itself.

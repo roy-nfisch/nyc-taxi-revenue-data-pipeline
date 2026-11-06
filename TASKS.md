@@ -380,7 +380,7 @@ not completed work or permission to publish.
   dependency/packaging setup and focused checks, not loading or business SQL.
   Done when the parallel tasks can use the same contracts and ETL still runs
   without DuckDB. Avoid placeholder methods or a generic backend abstraction.
-  Completed: the [ETL and ELT contracts](docs/etl-elt-contract.md) define one raw
+  Completed: the [ELT guide](docs/elt.md) define one raw
   table per source, serialized Arrow schema metadata, source-scoped identity,
   storage paths and future warehouse operations. DuckDB 2.0.0 is locked behind
   the `elt` extra; registry DDL is package data. Focused checks cover registry
@@ -431,6 +431,9 @@ not completed work or permission to publish.
   146,486 read, 146,475 accepted, 90 dates and USD 3,395,290.56.
   Storage/memory/maintenance costs and manual commands are in the run guide.
   No image has been published; owner review and merge remain separate.
+  Documentation review consolidated five ELT guides into `docs/elt.md`, retaining
+  the flow diagram and runnable examples. Detailed interfaces stay in ADR 002;
+  ELT docstrings now describe inputs, results, side effects and failures consistently.
 
 - [ ] **T11.7 — Publish the reviewed ELT image.** Depends on merged T11.6, passing
   release checks and explicit owner approval. Agree an ELT image variant/package
