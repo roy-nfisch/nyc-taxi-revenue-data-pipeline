@@ -18,7 +18,12 @@ from green_taxi.settings import PipelineSettings
 @click.option("--data-dir", type=click.Path(path_type=Path))
 @click.option("--force", is_flag=True)
 def main(config_path, data_dir, force):
-    """Stage, load, calculate and publish one batch; print its metadata path."""
+    """Run the ELT batch with selected settings and print its metadata path.
+
+    config_path selects JSON or packaged defaults; data_dir overrides storage.
+    force refreshes inputs. Invalid configuration raises ClickException; runtime
+    errors fail the process. No Prefect server or schedule is started.
+    """
     try:
         settings = PipelineSettings.from_file(config_path, data_dir=data_dir)
     except (OSError, ValueError) as error:

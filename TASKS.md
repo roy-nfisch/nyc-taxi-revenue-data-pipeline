@@ -136,7 +136,7 @@ T08 and T09 were reviewed and merged in
   explicit project network, and separate persistent data/history volumes. Real
   container flow and plain-container command both processed the agreed period.
   CI uses an Ubuntu 26.04 Docker job with tiny synthetic inputs; native Python
-  jobs retain slim runners. See [run instructions](docs/docker-prefect.md).
+  jobs retain slim runners. See [run instructions](docs/docker.md).
   An optional Compose override mounts a trusted custom JSON file read-only for
   both run modes. Base Compose keeps packaged defaults; missing config paths fail
   without creating directories. Tests verify the mount rejects writes and a
@@ -380,7 +380,7 @@ not completed work or permission to publish.
   dependency/packaging setup and focused checks, not loading or business SQL.
   Done when the parallel tasks can use the same contracts and ETL still runs
   without DuckDB. Avoid placeholder methods or a generic backend abstraction.
-  Completed: the [ETL and ELT contracts](docs/etl-elt-contract.md) define one raw
+  Completed: the [ELT guide](docs/elt.md) define one raw
   table per source, serialized Arrow schema metadata, source-scoped identity,
   storage paths and future warehouse operations. DuckDB 2.0.0 is locked behind
   the `elt` extra; registry DDL is package data. Focused checks cover registry
@@ -431,6 +431,9 @@ not completed work or permission to publish.
   146,486 read, 146,475 accepted, 90 dates and USD 3,395,290.56.
   Storage/memory/maintenance costs and manual commands are in the run guide.
   No image has been published; owner review and merge remain separate.
+  Documentation review consolidated five ELT guides into `docs/elt.md`, retaining
+  the flow diagram and runnable examples. Detailed interfaces stay in ADR 002;
+  ELT docstrings now describe inputs, results, side effects and failures consistently.
 
 - [ ] **T11.7 — Publish the reviewed ELT image.** Depends on merged T11.6, passing
   release checks and explicit owner approval. Agree an ELT image variant/package
@@ -442,13 +445,20 @@ not completed work or permission to publish.
   Record its digest and run instructions; publishing an image does not deploy a
   running service.
 
-- [x] **T11.8 — Explain ETL and ELT on the project landing page.** Documentation
-  implemented; PR review pending. Add a clear pipeline image, keep the existing
-  ETL demo/screenshot accurately labelled, and update commands, technologies,
-  results and the overview tree. Keep the public image identified as ETL-only.
-  This PR depends on the runtime PR and does not authorize image publication.
-  Verified local README links/images, SVG syntax, browser rendering and whitespace.
-  Documentation only; application tests were not rerun for this change.
+  Release support prepared in a separate dependent PR: manual variant choice,
+  dedicated `nyc-taxi-revenue-data-pipeline-elt` package, ELT default command,
+  tested-image/digest checks and unchanged ETL package/tags. Offline tests cover
+  variant/date/branch rejection. No workflow dispatch or publication performed.
+  Verification: both final Docker targets built; 496 full-stack parallel tests
+  passed with Docker enabled, including five ELT image/preparation checks and
+  32 offline release-safety tests. Ruff lint/format and whitespace checks passed.
+  Before completion: merge the release PR, approve package/tag,
+  publish from main, verify package visibility and anonymous pull, run the fresh
+  image non-root and record its digest. These remain unchecked until performed.
+
+- [x] **T11.8 — Explain ETL and ELT on the project landing page.** Added a
+  pipeline diagram and updated the README's commands, results and overview.
+  Documentation is under review in PR #20; it does not publish an image.
 
 ### Parallel work and PR order
 
@@ -467,6 +477,20 @@ T11.1 → T11.2 → T11.3 / T11.4 / T11.5 in parallel → T11.6 → T11.7.
 - Merge the parallel PRs independently, updating each with `main` as needed.
   T11.6 then connects and verifies the combined work; do not defer all testing
   until integration or publish merely because the image builds.
+
+## Follow-up — project clarity
+
+- [ ] **T12 — Make the project easier to follow.** Refine the README and linked
+  explanations so a new reader can understand the pipeline before its internals.
+  - Show the ETL and ELT paths in a small diagram, with plain stage names.
+  - Follow one ride into a daily total to explain what the calculations do.
+  - Give one recommended run command per path and show where to find the result;
+    keep Docker, Prefect and configuration alternatives in the linked guides.
+  - Explain the main objects by their jobs, without requiring readers to learn
+    every helper first. Keep the existing data rules and reliability checks.
+  Done when a new reader can explain the stage order, run either path and locate
+  its output without guessing. Reuse existing diagrams and examples; remove
+  repetition rather than adding another guide. No architecture rewrite required.
 
 ## Working agreement
 

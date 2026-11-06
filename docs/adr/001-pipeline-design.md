@@ -221,7 +221,7 @@ not additional engines to maintain. Tests and CI are our additions.
 Prefect and Docker are required deliverables, not optional follow-ups. This adds
 container lifecycle, persistent storage, and Prefect connection configuration to
 verify. A passing run must produce the checked report and visible flow/task states;
-retries must not duplicate results. No API, ML model, dbt, broker, dashboard,
+retries must not duplicate results. No API, ML model, broker, dashboard,
 cloud deployment, or registry publishing is needed.
 Keep the reference unchanged during development and remove its folder before
 public release. Retain source attribution and the existing license notice.

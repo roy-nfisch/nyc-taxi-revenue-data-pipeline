@@ -10,10 +10,19 @@ from green_taxi.run_report import RunReport, code_identity
 
 
 class ELTPipeline:
-    """Compose existing objects; keep all SQL and money rules in their owners."""
+    """Coordinate staging, raw loading, SQL calculation and checked publication.
+
+    Supply validated settings and optionally a downloader for tests. Construction
+    performs no network or database work. Use one writer per storage directory;
+    the warehouse and report writer retain their own validation responsibilities.
+    """
 
     def __init__(self, settings, downloader=None):
-        """Store settings and collaborators without opening storage or a database."""
+        """Store settings and stage objects without opening storage or a database.
+
+        downloader defaults to TaxiDownloader(settings). Raw files stay shared
+        with ETL; the database and report destinations are under data_dir/elt.
+        """
         self.settings = settings
         self.downloader = (
             downloader if downloader is not None else TaxiDownloader(settings)
@@ -24,7 +33,11 @@ class ELTPipeline:
         )
 
     def start_run(self):
-        """Capture run identity before staging, using the shared report contract."""
+        """Return run UUID, UTC start time, code identity and DuckDB version.
+
+        Read build/package metadata before staging. Does not open DuckDB or
+        create storage; a missing optional engine distribution fails here.
+        """
         return self.reporting.start_run(
             code_identity(Path(__file__).resolve().parents[3])
         ) | {
@@ -33,17 +46,30 @@ class ELTPipeline:
         }
 
     def load(self, inputs):
-        """Load checked snapshots and close the connection before returning."""
+        """Load staged inputs and return None after closing the connection.
+
+        The warehouse verifies source identity and commits each source separately.
+        A failure propagates and stops the batch; no report is published here.
+        """
         with TaxiWarehouse(self.database_path) as warehouse:
             warehouse.load(inputs)
 
     def calculate(self, inputs):
-        """Reopen the warehouse and calculate only the selected source versions."""
+        """Return RevenueResult for the selected staged inputs and reporting period.
+
+        Reopen the warehouse, verify registered versions and run SQL. Close the
+        connection on success or failure. This method never writes report files.
+        """
         with TaxiWarehouse(self.database_path) as warehouse:
             return warehouse.calculate(inputs, self.settings.reporting_period)
 
     def run(self, *, force=False):
-        """Run one manual ELT batch; failures never publish success metadata."""
+        """Stage, load, calculate and save; return the successful metadata path.
+
+        force refreshes source files; otherwise checked files are reused. Reports
+        replace previous outputs rather than append. Errors propagate before a
+        successful return; an older report is not evidence this run succeeded.
+        """
         context = self.start_run()
         inputs = self.downloader.download(force=force)
         self.load(inputs)

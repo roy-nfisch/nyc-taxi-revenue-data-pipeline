@@ -1,5 +1,6 @@
 """Verify the installed ELT image on tiny data, as its default non-root user."""
 
+import json
 import os
 import subprocess
 
@@ -12,6 +13,31 @@ pytestmark = [
         reason="Opt into built-image checks.",
     ),
 ]
+
+
+def test_elt_image_defaults_to_elt_command():
+    """The published ELT variant must run ELT without an extra command override."""
+    result = subprocess.run(
+        [
+            "docker",
+            "image",
+            "inspect",
+            "green-taxi-elt:local",
+            "--format",
+            "{{json .Config.Cmd}}",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert json.loads(result.stdout) == [
+        "python",
+        "-m",
+        "green_taxi.elt",
+        "--data-dir",
+        "/data",
+    ]
 
 
 def test_elt_image_runs_and_reuses_sources_without_network():

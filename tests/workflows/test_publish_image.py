@@ -108,7 +108,7 @@ def test_workflow_release_guards_and_order():
     assert workflow.index(
         "Check published pipeline with tiny staged data"
     ) < workflow.index("Update latest after verification")
-    assert "image=ghcr.io/${GITHUB_REPOSITORY,,}" in workflow
+    assert 'os.environ["GITHUB_REPOSITORY"].lower()' in workflow
     assert "TESTED_IMAGE_ID" in workflow
     assert "packages: write" in workflow
     assert workflow.count("packages: write") == 1

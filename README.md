@@ -68,7 +68,7 @@ uv run --locked --extra elt python -m green_taxi.elt
 ```
 
 It reuses `data/raw/`, keeps its warehouse in `data/elt/warehouse.duckdb`, and
-saves reports to `data/elt/processed/`. See the [ELT run guide](docs/elt-runtime.md)
+saves reports to `data/elt/processed/`. See the [ELT run guide](docs/elt.md)
 for Docker and Prefect commands. The published image below is **ETL only**.
 
 ## Run with Docker and Prefect
@@ -109,7 +109,7 @@ docker run --rm --platform linux/amd64 \
 
 This runs the batch, not a public service. Reports persist in the named volume.
 The image is Linux amd64; Apple Silicon uses emulation. Native local builds remain
-available. See the [release guide](docs/docker-prefect.md#publish-to-ghcr)
+available. See the [release guide](docs/docker.md#publish-to-ghcr)
 for verification and Compose instructions.
 
 ### Follow a run
@@ -142,7 +142,7 @@ docker compose -f compose.yaml -f compose.config.yaml run --rm flow
 
 The override mounts the file read-only. Without it, Docker uses the defaults
 included in the image. Keep the January–March baseline when submitting changes;
-the [configuration guide](docs/docker-prefect.md#custom-json-configuration-optional)
+the [configuration guide](docs/docker.md#custom-json-configuration-optional)
 explains separate local settings and refresh commands.
 
 Reruns replace reports rather than appending them. Run only one batch per data directory.
@@ -168,7 +168,7 @@ Reruns replace reports rather than appending them. Run only one batch per data d
 
 Both are manual batches, not continuous streams. The diagram shows two choices,
 not branches that automatically run in parallel. Downloading and report writing
-are shared; each path owns its calculation. See the [SQL flow](docs/elt-sql.md)
+are shared; each path owns its calculation. See the [SQL flow](docs/elt.md#sql-flow)
 for the queries inside ELT.
 
 ## Results and limitations
@@ -225,7 +225,7 @@ CI runs quality, unit, integration and Docker checks. Tests use tiny synthetic
 inputs and fake HTTP responses, not public downloads. Add `--extra elt` to the
 `uv run` test command to include DuckDB checks; otherwise those tests skip.
 Docker checks are opt-in locally; see the
-[Docker guide](docs/docker-prefect.md#retries-and-checks).
+[Docker guide](docs/docker.md#retries-and-checks).
 
 ## Repository layout
 
@@ -279,11 +279,10 @@ its named volume rather than the host `data/` directory.
 ## Project notes
 
 - [Design decisions](docs/adr/001-pipeline-design.md): scope, data rules and object responsibilities.
-- [ELT design](docs/adr/002-elt-comparison.md) and [contracts](docs/etl-elt-contract.md): the database-first comparison.
+- [ELT guide](docs/elt.md) and [design decisions](docs/adr/002-elt-comparison.md): the database-first comparison.
 - [Real-data review](docs/data-review.md): source identities, reconciliation and repeat-run evidence.
-- [Docker and Prefect](docs/docker-prefect.md): configuration, storage and troubleshooting.
-- [Run ELT](docs/elt-runtime.md): database-first commands, storage and costs.
-- [Image publishing](docs/docker-prefect.md#publish-to-ghcr): manual release steps and approval gates.
+- [Docker](docs/docker.md): configuration, storage and troubleshooting.
+- [Image publishing](docs/docker.md#publish-to-ghcr): manual release steps and approval gates.
 
 The project uses [NYC TLC Green Taxi records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
 The original software notice remains in [LICENSE](LICENSE).
