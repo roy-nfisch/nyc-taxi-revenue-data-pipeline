@@ -5,8 +5,9 @@
 [![Python 3.13](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)](#run-locally)
 [![Processing: batch ETL and ELT](https://img.shields.io/badge/processing-batch%20ETL%20%7C%20ELT-blue)](#the-flow)
 [![Prefect: local orchestration](https://img.shields.io/badge/Prefect-local%20orchestration-blue)](#follow-a-run)
-[![Docker: local](https://img.shields.io/badge/Docker-local-2496ED?logo=docker&logoColor=white)](#run-with-docker-and-prefect)
+[![Docker: ETL and ELT](https://img.shields.io/badge/Docker-ETL%20%7C%20ELT-2496ED?logo=docker&logoColor=white)](#run-with-docker-and-prefect)
 [![GHCR: public ETL image](https://img.shields.io/badge/GHCR-public%20ETL%20image-blue)](https://github.com/users/roy-nfisch/packages/container/package/nyc-taxi-revenue-data-pipeline)
+[![GHCR: public ELT image](https://img.shields.io/badge/GHCR-public%20ELT%20image-blue)](https://github.com/users/roy-nfisch/packages/container/package/nyc-taxi-revenue-data-pipeline-elt)
 
 We built a small, object-oriented Python pipeline that turns NYC Green Taxi
 records into daily revenue reports. Our focus was reliable downloads, clear data
@@ -302,6 +303,7 @@ its named volume rather than the host `data/` directory.
 
 ## Project notes
 
+- [Explore ELT](notebooks/02-explore-elt.ipynb): follow a batch from raw files to a daily report.
 - [Design decisions](docs/adr/001-pipeline-design.md): scope, data rules and object responsibilities.
 - [ELT guide](docs/elt.md) and [design decisions](docs/adr/002-elt-comparison.md): the database-first comparison.
 - [Real-data review](docs/data-review.md): source identities, reconciliation and repeat-run evidence.
