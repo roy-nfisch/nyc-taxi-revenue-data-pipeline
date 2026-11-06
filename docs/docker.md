@@ -189,12 +189,19 @@ not be mistaken for a completed refresh. This can make extra HTTP requests.
 
 ```bash
 uv run --locked pytest -n 2 --dist loadfile
+```
+
+The opt-in Docker tests require both local images. Build them, then run the checks:
+
+```bash
+docker compose build
+docker compose -f compose.yaml -f compose.elt.yaml build elt-tools
 GREEN_TAXI_DOCKER_TESTS=1 uv run --locked pytest tests/docker/ -q
 ```
 
-The Docker tests require a built `green-taxi:local` image. They check non-root
-execution, known saved values and rebuilds, plus the rendered Compose contracts
-for loopback ports, health dependencies, persistent volumes, and manual profiles.
+They check non-root execution, known saved values and rebuilds, plus the rendered
+Compose contracts for loopback ports, health dependencies, persistent volumes,
+and manual profiles.
 They use tiny temporary inputs, not the public dataset; ordinary tests skip them
 unless explicitly enabled. CI validates Compose with the manual profile enabled.
 The end-to-end Compose check uses an isolated project, the default non-root user,
@@ -279,7 +286,7 @@ Run these commands in a host terminal; the empty login configuration checks
 anonymous access:
 
 ```bash
-docker --config "$(mktemp -d)" pull ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline-elt:2026.11.06
+docker --config "$(mktemp -d)" pull --platform linux/amd64 ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline-elt:2026.11.06
 docker run --rm --platform linux/amd64 \
   --mount type=volume,source=taxi-elt-release-data,target=/data \
   ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline-elt:2026.11.06
@@ -313,7 +320,7 @@ export TAXI_IMAGE=ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline:2026.11.05
 export DOCKER_DEFAULT_PLATFORM=linux/amd64
 docker pull "$TAXI_IMAGE"
 docker compose up -d --wait --no-build --pull always prefect
-docker compose run --rm --no-build --pull always flow
+docker compose run --rm --pull always flow
 ```
 
 The platform setting also allows Apple Silicon to run the published amd64 image

@@ -110,6 +110,8 @@ docker run --rm --platform linux/amd64 \
 ```
 
 This runs the batch, not a public service. Reports persist in the named volume.
+The ETL image is an earlier release; its metadata does not include the execution
+mode and engine version recorded by the current source code.
 The image is Linux amd64; Apple Silicon uses emulation. Native local builds remain
 available. See the [release guide](docs/docker.md#publish-to-ghcr)
 for verification and Compose instructions.

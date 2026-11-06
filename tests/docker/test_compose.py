@@ -59,6 +59,34 @@ def test_prefect_is_loopback_only_and_waits_for_health(services):
     assert "http://127.0.0.1:4200/" in services["prefect"]["healthcheck"]["test"][-1]
 
 
+@pytest.mark.parametrize("port", ["4205", "4217"])
+def test_elt_flow_uses_host_url_for_ui_and_service_url_for_api(port):
+    """ELT logs point to the host UI while API calls stay on the Docker network."""
+    result = subprocess.run(
+        [
+            "docker",
+            "compose",
+            "-f",
+            "compose.yaml",
+            "-f",
+            "compose.elt.yaml",
+            "--profile",
+            "manual",
+            "config",
+            "--format",
+            "json",
+        ],
+        env=os.environ | {"PREFECT_PORT": port},
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    environment = json.loads(result.stdout)["services"]["elt-flow"]["environment"]
+    assert environment["PREFECT_API_URL"] == "http://prefect:4200/api"
+    assert environment["PREFECT_UI_URL"] == f"http://127.0.0.1:{port}"
+
+
 def test_history_and_data_use_separate_persistent_volumes(services):
     """State survives service removal; app data is shared by the two run modes."""
 
