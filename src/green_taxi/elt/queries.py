@@ -14,7 +14,11 @@ from green_taxi.reporting import (
 
 
 def column_kind(kind: pa.DataType) -> str:
-    """Describe an original Arrow column without changing its values."""
+    """Return the SQL kind label for an original Arrow column type.
+
+    Preserve boolean and timezone distinctions; unsupported types raise
+    ValueError. This helper performs no I/O or conversion of ride values.
+    """
     if pa.types.is_boolean(kind):
         return "boolean"
     if pa.types.is_null(kind):
@@ -35,7 +39,11 @@ def column_kind(kind: pa.DataType) -> str:
 
 
 class WarehouseQueries:
-    """Run classification and aggregation without copying the SQL rules into Python."""
+    """Run SQL and adapt its result to the shared report contract.
+
+    Borrow a connection owned by TaxiWarehouse. The warehouse controls its
+    transaction and rollback; this object neither opens nor closes connections.
+    """
 
     def __init__(self, connection):
         """Borrow the context-owned connection; do not open or close another one."""
@@ -43,7 +51,11 @@ class WarehouseQueries:
 
     @staticmethod
     def sql(name: str) -> str:
-        """Read a trusted packaged resource, independent of the current directory."""
+        """Return SQL text from a trusted packaged resource name.
+
+        Names are internal constants, not user input. Missing resources and read
+        failures propagate; no SQL is executed by this method.
+        """
         return (
             files("green_taxi.elt")
             .joinpath(f"sql/{name}.sql")
@@ -72,6 +84,8 @@ class WarehouseQueries:
 
         sources contains validated (quoted table, original schema) pairs. No source
         is deduplicated. Sub-cents or no usable rides fail before publication.
+        Temporary classifications are dropped on success; the caller must roll
+        back the transaction on failure. No report files are written here.
         """
         connection = self.connection
         connection.execute(self.sql("normalize_money"))
@@ -85,7 +99,12 @@ class WarehouseQueries:
         return result
 
     def result(self, period) -> RevenueResult:
-        """Validate counters first, then convert final facts without rounding."""
+        """Return RevenueResult from temporary classifications for this period.
+
+        Reject sub-cents or no usable rows before adapting final facts. SQL owns
+        aggregation; Python converts integer cents to Decimal and builds the
+        shared calendar. SQL, conversion and validation failures propagate.
+        """
         prefix = "WITH classified AS (SELECT * FROM _elt_classified) "
         values = self.connection.execute(prefix + self.sql("counts")).fetchone()
         counts = dict(zip(COUNT_FIELDS, map(int, values[:-1]), strict=True))

@@ -335,23 +335,22 @@ and dotenv contract checks passed in the final Docker CI job.
   [PR #11](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/pull/11);
   [ADR 002](docs/adr/002-elt-comparison.md): DuckDB, plain SQL, transactional raw
   loading and a separate optional execution path. Folder separation is merged;
-  dependency setup, loading, SQL and Docker preparation are merged. Runtime
-  integration is verified in its review PR; publication preparation is separate.
-  Keep the checked ETL implementation as
+  the optional dependency/registry foundation is in progress in T11.2, with no
+  loading or transformation stages. Keep the checked ETL implementation as
   the comparison baseline; this task does not block T07/T10 or public release.
   GPT-6 Astra and GPT-6.1 Terra reviewed the proposal. The owner accepted their
   clarifications: preserve raw types without turning invalid rows into batch
   failures, verify installed-package/container execution and ETL without extras,
   avoid mandatory per-ride identity, and extract shared helpers only when needed.
   ADR 002 records the checks and why this is a learning comparison, not an upgrade.
-  Actual image publication remains approval-gated and is not yet complete.
+  T11.2 and later work remain separate from the behaviour-preserving folder move.
 
 ### T11 delivery plan
 
 Each implementation task includes its focused tests, documentation and review.
 Keep objects small, use composition and reuse fixtures; do not create a new
-framework or duplicate the existing ETL tests. Checked items below record actual
-completion; implementation does not grant permission to publish.
+framework or duplicate the existing ETL tests. The following are proposed tasks,
+not completed work or permission to publish.
 
 - [x] **T11.1 — Separate the folders.** Reviewed and merged in
   [PR #12](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/pull/12).
@@ -381,7 +380,7 @@ completion; implementation does not grant permission to publish.
   dependency/packaging setup and focused checks, not loading or business SQL.
   Done when the parallel tasks can use the same contracts and ETL still runs
   without DuckDB. Avoid placeholder methods or a generic backend abstraction.
-  Completed: the [ETL and ELT contracts](docs/etl-elt-contract.md) define one raw
+  Completed: the [ELT guide](docs/elt.md) define one raw
   table per source, serialized Arrow schema metadata, source-scoped identity,
   storage paths and future warehouse operations. DuckDB 2.0.0 is locked behind
   the `elt` extra; registry DDL is package data. Focused checks cover registry
@@ -431,10 +430,10 @@ completion; implementation does not grant permission to publish.
   all daily values, calendar rows and counters on two SQL reruns:
   146,486 read, 146,475 accepted, 90 dates and USD 3,395,290.56.
   Storage/memory/maintenance costs and manual commands are in the run guide.
-  Independent Astra review found missing execution provenance; corrected both
-  contexts to record mode/engine version and added emitted-JSON assertions.
-  The reviewer confirmed the fix; passive imports and targeted regressions passed.
   No image has been published; owner review and merge remain separate.
+  Documentation review consolidated five ELT guides into `docs/elt.md`, retaining
+  the flow diagram and runnable examples. Detailed interfaces stay in ADR 002;
+  ELT docstrings now describe inputs, results, side effects and failures consistently.
 
 - [ ] **T11.7 — Publish the reviewed ELT image.** Depends on merged T11.6, passing
   release checks and explicit owner approval. Agree an ELT image variant/package
@@ -445,6 +444,7 @@ completion; implementation does not grant permission to publish.
   can be pulled without login and a fresh non-root run produces checked outputs.
   Record its digest and run instructions; publishing an image does not deploy a
   running service.
+
   Release support prepared in a separate dependent PR: manual variant choice,
   dedicated `nyc-taxi-revenue-data-pipeline-elt` package, ELT default command,
   tested-image/digest checks and unchanged ETL package/tags. Offline tests cover
@@ -452,7 +452,7 @@ completion; implementation does not grant permission to publish.
   Verification: both final Docker targets built; 496 full-stack parallel tests
   passed with Docker enabled, including five ELT image/preparation checks and
   32 offline release-safety tests. Ruff lint/format and whitespace checks passed.
-  Before completion: merge the runtime and release PRs, approve package/tag,
+  Before completion: merge the release PR, approve package/tag,
   publish from main, verify package visibility and anonymous pull, run the fresh
   image non-root and record its digest. These remain unchecked until performed.
 
@@ -473,6 +473,20 @@ T11.1 → T11.2 → T11.3 / T11.4 / T11.5 in parallel → T11.6 → T11.7.
 - Merge the parallel PRs independently, updating each with `main` as needed.
   T11.6 then connects and verifies the combined work; do not defer all testing
   until integration or publish merely because the image builds.
+
+## Follow-up — project clarity
+
+- [ ] **T12 — Make the project easier to follow.** Refine the README and linked
+  explanations so a new reader can understand the pipeline before its internals.
+  - Show the ETL and ELT paths in a small diagram, with plain stage names.
+  - Follow one ride into a daily total to explain what the calculations do.
+  - Give one recommended run command per path and show where to find the result;
+    keep Docker, Prefect and configuration alternatives in the linked guides.
+  - Explain the main objects by their jobs, without requiring readers to learn
+    every helper first. Keep the existing data rules and reliability checks.
+  Done when a new reader can explain the stage order, run either path and locate
+  its output without guessing. Reuse existing diagrams and examples; remove
+  repetition rather than adding another guide. No architecture rewrite required.
 
 ## Working agreement
 

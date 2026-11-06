@@ -164,7 +164,7 @@ It does not process a continuous stream.
 `TaxiPipeline` connects `TaxiDownloader`, `DailyRevenueCalculator` and
 `ReportWriter`, keeping each responsibility separate.
 
-The separate [ELT pipeline](docs/elt-runtime.md) loads raw files into DuckDB
+The separate [ELT pipeline](docs/elt.md) loads raw files into DuckDB
 before running SQL. It produces the same report in its own output directory.
 
 ## Results and limitations
@@ -271,7 +271,7 @@ its named volume rather than the host `data/` directory.
 ## Project notes
 
 - [Design decisions](docs/adr/001-pipeline-design.md): scope, data rules and object responsibilities.
-- [ELT design](docs/adr/002-elt-comparison.md) and [contracts](docs/etl-elt-contract.md): the database-first comparison.
+- [ELT guide](docs/elt.md) and [design decisions](docs/adr/002-elt-comparison.md): the database-first comparison.
 - [Real-data review](docs/data-review.md): source identities, reconciliation and repeat-run evidence.
 - [Docker and Prefect](docs/docker-prefect.md): configuration, storage and troubleshooting.
 - [Image publishing](docs/docker-prefect.md#publish-to-ghcr): manual release steps and approval gates.
