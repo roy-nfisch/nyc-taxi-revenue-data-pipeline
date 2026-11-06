@@ -15,7 +15,8 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
 ETL and ELT implementation, verification and landing-page work are merged.
 The portfolio entry is complete. The remaining release work is **T11.7**:
 approve and publish the ELT image, then verify public access and a fresh run.
-T12's documentation cleanup is prepared on this branch for review.
+T12's documentation and code clarity improvements are implemented for owner
+review. Python checks passed; Docker verification was excluded from this change.
 Earlier verification notes below describe checks at the time of each task.
 
 ## Done
@@ -487,25 +488,45 @@ T11.1 → T11.2 → T11.3 / T11.4 / T11.5 in parallel → T11.6 → T11.7.
 
 ## Follow-up — project clarity
 
-- [x] **T12 — Make the project easier to follow.** Documentation review complete;
-  changes await owner review on this branch. Refine the README and linked
-  explanations so a new reader can understand the pipeline before its internals.
+- [ ] **T12 — Make the project easier to follow.** Documentation changes await
+  owner review; the code clarity changes passed Python verification.
+  Refine the README and linked explanations so a new reader can understand the
+  pipeline before its internals.
   - Show the ETL and ELT paths in a small diagram, with plain stage names.
   - Follow one ride into a daily total to explain what the calculations do.
   - Give one recommended run command per path and show where to find the result;
     keep Docker, Prefect and configuration alternatives in the linked guides.
   - Explain the main objects by their jobs, without requiring readers to learn
     every helper first. Keep the existing data rules and reliability checks.
+  - Review code, file and function names, object responsibilities, SQL and tests
+    for clarity and simplicity. Identify unnecessary complexity and duplication;
+    keep OOD, existing behaviour, data rules and meaningful checks.
   Done when a new reader can explain the stage order, run either path and locate
-  its output without guessing. Reuse existing diagrams and examples; remove
-  repetition rather than adding another guide. No architecture rewrite required.
-  Reviewed against King County's concise landing-page style. The existing
-  diagram, run commands and output paths cover both approaches. Added an ELT
+  its output without guessing, and the code clarity review is complete. Reuse
+  existing diagrams and examples; remove repetition rather than adding another
+  guide. Propose focused improvements, not an unnecessary architecture rewrite.
+  The existing diagram, run commands and output paths cover both approaches.
+  Added an ELT
   metadata-read command and a short explanation of the main objects; linked to
   the existing ride-to-total example instead of repeating it. Kept Docker and
-  publishing instructions in the shared guide. No application code changed.
-  Verified local README/task links and anchors, image paths, SVG syntax and
-  whitespace. No application tests, downloads or container runs were performed.
+  publishing instructions in the shared guide. The earlier documentation-only
+  checks covered local links, anchors, image paths, SVG syntax and whitespace.
+
+  **Code clarity review.** Applied three focused improvements:
+
+  - Both pipelines expose a save step; the ELT batch and flow use the same method.
+  - Server-free ELT flow checks are unit tests; the real Prefect run stays integration.
+  - SQL result-building and the Prefect configuration test have clearer names.
+
+  Added save-delegation and failure checks. Data rules, SQL calculations, output
+  paths and public commands are unchanged. No new framework or dependencies.
+  Verification: 481 Python tests passed with the ELT extra; 186 unit tests passed
+  after syncing default dependencies and confirming DuckDB was absent. Lint,
+  formatting and whitespace checks passed. No Docker tests, real-data downloads
+  or publishing were performed. Owner review remains before completion.
+  A second clarity pass adds a reading guide to the SQL classification stages.
+  This latest documentation-only change has not been tested; review and parity
+  checks remain before treating the full clarity work as complete.
 
 ## Working agreement
 

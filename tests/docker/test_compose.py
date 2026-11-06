@@ -31,7 +31,7 @@ def services():
     return json.loads(result.stdout)["services"]
 
 
-def test_api_is_loopback_only_and_waits_for_health(services):
+def test_prefect_is_loopback_only_and_waits_for_health(services):
     """Only the local server exposes a port; the flow waits for a healthy API."""
     assert services["prefect"]["ports"] == [
         {

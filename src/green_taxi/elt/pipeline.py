@@ -1,4 +1,8 @@
-"""Connect checked staging, warehouse SQL and separate ELT report publication."""
+"""Run ELT: download files, load raw rides, calculate in SQL, save reports.
+
+TaxiDownloader stages the files. TaxiWarehouse loads and queries them.
+RunReport and ReportWriter validate and save the results with run metadata.
+"""
 
 from importlib.metadata import version
 from pathlib import Path
@@ -74,4 +78,12 @@ class ELTPipeline:
         inputs = self.downloader.download(force=force)
         self.load(inputs)
         result = self.calculate(inputs)
+        return self.save(inputs, result, context)
+
+    def save(self, inputs, result, context):
+        """Publish the calculated result and input lineage; return metadata path.
+
+        Delegate to the shared RunReport without recalculating values. Both the
+        batch and Prefect flow use this step. Writer failures propagate unchanged.
+        """
         return self.reporting.save(inputs, result, context)

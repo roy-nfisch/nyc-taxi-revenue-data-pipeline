@@ -152,7 +152,9 @@ nyc-taxi-revenue-data-pipeline/
 │   │       ├── test_warehouse.py  # Lossless loading, changed sources and rollback
 │   │       ├── test_pipeline.py   # Writer contract and safe ELT reruns
 │   │       ├── test_main.py       # Optional command and installed SQL resources
-│   │       └── test_flow.py       # Stage order and failure propagation
+│   │       ├── test_pipeline_unit.py # Save delegation and failures
+│   │       ├── test_flow_unit.py  # Server-free CLI and stage-order checks
+│   │       └── test_flow.py       # Real Prefect integration
 │   └── docker/
 │       └── test_elt.py            # Packaged ELT run; reuse Docker test helpers
 ├── data/                         # Generated locally; ignored by Git

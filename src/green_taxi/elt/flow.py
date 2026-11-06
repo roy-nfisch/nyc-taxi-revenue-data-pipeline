@@ -21,42 +21,26 @@ from green_taxi.settings import PipelineSettings
     cache_policy=None,
 )
 def download_inputs(pipeline, force):
-    """Return staged inputs from the supplied pipeline's shared downloader.
-
-    force selects deliberate refresh. Partial downloads remain reusable on retry;
-    only transient HTTP failures qualify for the bounded retry policy above.
-    """
+    """Stage the files; retry transient failures and reuse completed downloads."""
     return pipeline.downloader.download(force=force)
 
 
 @task(name="Load raw sources", retries=0, persist_result=False, cache_policy=None)
 def load_sources(pipeline, inputs):
-    """Load the staged inputs through the pipeline and return None.
-
-    The pipeline owns connection cleanup. Schema, identity and storage errors
-    propagate without retry, preventing transformation or publication.
-    """
+    """Load raw files; stop the flow if validation or storage fails."""
     pipeline.load(inputs)
 
 
 @task(name="Transform with SQL", retries=0, persist_result=False, cache_policy=None)
 def calculate_report(pipeline, inputs):
-    """Return RevenueResult from the pipeline's SQL calculation for these inputs.
-
-    No rules are copied into this task. Sub-cent and no-usable-row failures
-    propagate without retry, preventing the save stage.
-    """
+    """Calculate the report in SQL; invalid results stop the flow."""
     return pipeline.calculate(inputs)
 
 
 @task(name="Save ELT report", retries=0, persist_result=False, cache_policy=None)
 def save_report(pipeline, inputs, result, context):
-    """Publish inputs, result and run context; return the metadata path as text.
-
-    The shared reporting object validates and writes outputs. Writer failures
-    propagate; this task does not calculate revenue or claim success early.
-    """
-    return str(pipeline.reporting.save(inputs, result, context))
+    """Save the checked report and return its metadata path as text."""
+    return str(pipeline.save(inputs, result, context))
 
 
 @flow(

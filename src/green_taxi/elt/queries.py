@@ -1,4 +1,9 @@
-"""Execute packaged SQL on one warehouse connection; return checked report values."""
+"""Turn raw rides into a daily report using the packaged SQL files.
+
+The warehouse supplies the connection and selected sources. We register the
+money helper, classify each ride, check the counts, then calculate daily totals.
+The shared report writer saves the result later.
+"""
 
 from importlib.resources import files
 
@@ -94,11 +99,11 @@ class WarehouseQueries:
         )
         for table, schema in sources:
             self.classify(table, schema, period)
-        result = self.result(period)
+        result = self.build_result(period)
         connection.execute("DROP TABLE _elt_classified")
         return result
 
-    def result(self, period) -> RevenueResult:
+    def build_result(self, period) -> RevenueResult:
         """Return RevenueResult from temporary classifications for this period.
 
         Reject sub-cents or no usable rows before adapting final facts. SQL owns

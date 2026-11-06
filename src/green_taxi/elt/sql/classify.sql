@@ -12,6 +12,11 @@
 -- WITH names below are intermediate query results, not saved database tables.
 -- First check the pickup, then the period, then the money, matching ETL rules.
 -- Keep all parsing in SQL; do not coerce raw sources into one common schema.
+-- Reading guide:
+--   raw_text → dated: read and validate the pickup date and time.
+--   eligible: exclude invalid or out-of-period pickups before checking money.
+--   money_normalized → cents_parts: parse the amount without rounding.
+--   classified: assign one status and exact cents to each ride.
 WITH raw_text AS (
     -- Read a single source and prepare text for parsing without rounding money.
     SELECT
