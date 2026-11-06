@@ -22,6 +22,7 @@ services:
     image: ${TAXI_ELT_IMAGE:-green-taxi-elt:local}
     build:
       context: .
+      target: elt
       args:
         INSTALL_ELT: "true"
         BUILD_REVISION: ${BUILD_REVISION:-unknown}

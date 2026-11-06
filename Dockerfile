@@ -1,5 +1,5 @@
 FROM ghcr.io/astral-sh/uv:0.13.5 AS uv
-FROM python:3.13.17-slim
+FROM python:3.13.17-slim AS runtime
 ARG BUILD_REVISION=unknown
 ARG BUILD_DIRTY=unknown
 ARG INSTALL_ELT=false
@@ -28,3 +28,9 @@ RUN case "$INSTALL_ELT" in \
 USER app
 ENTRYPOINT ["uv", "run", "--no-sync"]
 CMD ["python", "-m", "green_taxi", "--run", "--data-dir", "/data"]
+
+FROM runtime AS elt
+CMD ["python", "-m", "green_taxi.elt", "--data-dir", "/data"]
+
+# Keep an ordinary build on the original ETL command.
+FROM runtime AS etl

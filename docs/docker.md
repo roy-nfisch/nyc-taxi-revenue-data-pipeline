@@ -1,4 +1,4 @@
-# Run with Docker and Prefect
+# Docker: run and publish
 
 Docker packages our existing Python application. Prefect adds task states and
 bounded download retries; it does not replace the data rules. Both entry points
@@ -6,8 +6,9 @@ reuse `TaxiPipeline.from_settings()` and the same downloader/calculator/writer.
 
 The stage implementations live in `src/green_taxi/etl/`. The existing
 `python -m green_taxi.flow` command is a thin delegate to that flow, so Compose
-commands and server settings are unchanged. This guide still runs Python ETL,
-not the proposed database-first ELT path.
+commands and server settings are unchanged. The run commands below use Python
+ETL; see [the ELT guide](elt.md) for DuckDB commands. The publishing section
+covers both images.
 
 ## Start and run
 
@@ -218,8 +219,19 @@ publicly or mount the Docker socket. These local commands do not deploy a public
 
 ## Publish to GHCR
 
-The first release, **2026.11.05**, is published and publicly downloadable.
+The first ETL release, **2026.11.05**, is published and publicly downloadable.
 Publishing distributes the app, not the taxi data, and does not deploy Prefect.
+No ELT image has been published yet.
+
+Both variants use the same manual workflow:
+
+| Variant | GHCR package | Default command | Report directory in the container |
+|---|---|---|---|
+| `etl` (default) | `nyc-taxi-revenue-data-pipeline` | Python ETL | `/data/processed/` |
+| `elt` | `nyc-taxi-revenue-data-pipeline-elt` | DuckDB ELT | `/data/elt/processed/` |
+
+Each package has its own dated tag, commit tag and `latest`. Publishing ELT does
+not change ETL tags.
 
 | Release check | Verified result |
 |---|---|
@@ -237,8 +249,9 @@ reuse their named data/history volumes.
 
 For future owner-approved releases from reviewed `main`:
 
-1. In GitHub Actions, select **Publish pipeline image**, choose `main`, and enter
-   an unused date tag, such as `2026.11.05.1` for another release that day.
+1. In GitHub Actions, select **Publish pipeline image**, choose `main`, select
+   `etl` or `elt`, and enter an unused date tag, such as `2026.11.05.1` for another
+   release that day.
    The existing `2026.11.05` release must not be overwritten.
 2. The workflow checks Python/package quality, builds the image, and runs the
    tests. Only the separate publishing job has `packages: write` permission.
@@ -249,13 +262,27 @@ For future owner-approved releases from reviewed `main`:
 4. The owner must make the GHCR package public in its settings and verify an
    anonymous pull. A public repository does not establish public package access.
 
+After an ELT release, replace `VERSION` below with its published tag. Run these
+commands in a host terminal; the empty login configuration checks anonymous access:
+
+```bash
+docker --config "$(mktemp -d)" pull ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline-elt:VERSION
+docker run --rm --platform linux/amd64 \
+  --mount type=volume,source=taxi-elt-release-data,target=/data \
+  ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline-elt:VERSION
+```
+
+The run downloads any missing configured files and saves reports in the ELT
+directory above. For fresh-run verification, use a new disposable volume; reusing
+this volume keeps its data. For local ELT and Prefect commands, see [the ELT guide](elt.md).
+
 The initial workflow targets **Linux amd64** on Ubuntu 26.04. Local Docker builds
 remain available for the host architecture. Multi-platform release is not claimed.
 If registry authorization fails, stop and review package permissions;
 never interpret 401/403 as permission to overwrite a tag. If verification fails
 after a dated tag was pushed, fix the cause and use a new suffix. Do not reuse it.
 
-The README's direct batch command stores reports in `nyc-taxi-release-data`,
+The README's direct ETL batch command stores reports in `nyc-taxi-release-data`,
 separate from Compose's volume. After running that command, inspect its report
 with a read-only mount:
 
@@ -266,7 +293,7 @@ docker run --rm --platform linux/amd64 \
   python -c "from pathlib import Path; print(Path('/data/processed/metadata.json').read_text())"
 ```
 
-To run the verified release with Compose, set its tag in a host terminal:
+To run the verified ETL release with Compose, set its tag in a host terminal:
 
 ```bash
 export TAXI_IMAGE=ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline:2026.11.05

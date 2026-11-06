@@ -3,6 +3,12 @@ name: Publish pipeline image
 on:
   workflow_dispatch:
     inputs:
+      variant:
+        description: "Pipeline to publish (separate ETL and ELT packages)"
+        required: true
+        default: etl
+        type: choice
+        options: [etl, elt]
       version:
         description: "Release tag, e.g. 2026.11.05 or 2026.11.05.1"
         required: true
@@ -31,6 +37,7 @@ jobs:
         id: release
         env:
           VERSION: ${{ inputs.version }}
+          VARIANT: ${{ inputs.variant }}
         run: |
           if [[ "$GITHUB_REF" != refs/heads/main ]]; then
             echo '::error::Publish only from main.'
@@ -41,8 +48,16 @@ jobs:
             exit 1
           fi
           python3 -c 'import datetime, os; datetime.date(*map(int, os.environ["VERSION"].split(".")[:3]))'
-          # Use the reviewed repository name for the first GHCR package.
-          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          image=$(python3 -c 'import os; print("ghcr.io/" + os.environ["GITHUB_REPOSITORY"].lower())')
+          case "$VARIANT" in
+            etl) target=etl; install_elt=false; local_tag=green-taxi:local ;;
+            elt) image="$image-elt"; target=elt; install_elt=true; local_tag=green-taxi-elt:local ;;
+            *) echo '::error::Choose etl or elt.'; exit 1 ;;
+          esac
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          echo "install_elt=$install_elt" >> "$GITHUB_OUTPUT"
+          echo "local_tag=$local_tag" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
@@ -51,7 +66,7 @@ jobs:
       - name: Install locked test dependencies
         run: |
           uv python install
-          uv sync --locked
+          uv sync --locked --extra elt
       - name: Check Python code and package
         run: |
           uv run --locked ruff check src tests .github/scripts
@@ -60,9 +75,12 @@ jobs:
       - name: Validate Compose and build image
         env:
           IMAGE: ${{ steps.release.outputs.image }}
+          TARGET: ${{ steps.release.outputs.target }}
+          INSTALL_ELT: ${{ steps.release.outputs.install_elt }}
         run: |
           docker compose --profile manual config --quiet
-          docker build -t "$IMAGE:test" \
+          docker compose build
+          docker build --target "$TARGET" --build-arg "INSTALL_ELT=$INSTALL_ELT" -t "$IMAGE:test" \
             --build-arg "BUILD_REVISION=$GITHUB_SHA" --build-arg BUILD_DIRTY=false \
             --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" .
@@ -74,9 +92,11 @@ jobs:
       - name: Run all tests against the built image
         env:
           GREEN_TAXI_DOCKER_TESTS: "1"
+          IMAGE: ${{ steps.release.outputs.image }}
+          LOCAL_TAG: ${{ steps.release.outputs.local_tag }}
         run: |
-          docker tag "${{ steps.release.outputs.image }}:test" green-taxi:local
-          uv run --locked pytest tests/ -n 2 --dist loadfile
+          docker tag "$IMAGE:test" "$LOCAL_TAG"
+          uv run --locked --extra elt pytest tests/ -n 2 --dist loadfile
       - name: Save the tested image
         id: archive
         env:
@@ -147,11 +167,19 @@ jobs:
         env:
           REFERENCE: ${{ steps.published.outputs.reference }}
           GREEN_TAXI_DOCKER_TESTS: "1"
+          VARIANT: ${{ inputs.variant }}
         run: |
-          docker tag "$REFERENCE" green-taxi:local
+          if [[ "$VARIANT" == elt ]]; then
+            local_tag=green-taxi-elt:local
+            test_file=tests/docker/test_elt.py
+          else
+            local_tag=green-taxi:local
+            test_file=tests/docker/test_container.py
+          fi
+          docker tag "$REFERENCE" "$local_tag"
           uv python install
           uv sync --locked
-          uv run --locked pytest tests/docker/test_container.py -k 'nonroot or rebuilds'
+          uv run --locked pytest "$test_file"
       - name: Update latest after verification
         env:
           REFERENCE: ${{ steps.published.outputs.reference }}

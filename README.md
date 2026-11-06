@@ -96,7 +96,7 @@ docker run --rm --platform linux/amd64 \
 
 This runs the batch, not a public service. Reports persist in the named volume.
 The image is Linux amd64; Apple Silicon uses emulation. Native local builds remain
-available. See the [release guide](docs/docker-prefect.md#publish-to-ghcr)
+available. See the [release guide](docs/docker.md#publish-to-ghcr)
 for verification and Compose instructions.
 
 ### Follow a run
@@ -128,7 +128,7 @@ docker compose -f compose.yaml -f compose.config.yaml run --rm flow
 
 The override mounts the file read-only. Without it, Docker uses the defaults
 included in the image. Keep the January–March baseline when submitting changes;
-the [configuration guide](docs/docker-prefect.md#custom-json-configuration-optional)
+the [configuration guide](docs/docker.md#custom-json-configuration-optional)
 explains separate local settings and refresh commands.
 
 Reruns replace reports rather than appending them. Run only one batch per data directory.
@@ -218,7 +218,7 @@ CI runs quality, unit, integration and Docker checks. Tests use tiny synthetic
 inputs and fake HTTP responses, not public downloads. Add `--extra elt` to the
 `uv run` test command to include DuckDB checks; otherwise those tests skip.
 Docker checks are opt-in locally; see the
-[Docker guide](docs/docker-prefect.md#retries-and-checks).
+[Docker guide](docs/docker.md#retries-and-checks).
 
 ## Repository layout
 
@@ -273,8 +273,8 @@ its named volume rather than the host `data/` directory.
 - [Design decisions](docs/adr/001-pipeline-design.md): scope, data rules and object responsibilities.
 - [ELT guide](docs/elt.md) and [design decisions](docs/adr/002-elt-comparison.md): the database-first comparison.
 - [Real-data review](docs/data-review.md): source identities, reconciliation and repeat-run evidence.
-- [Docker and Prefect](docs/docker-prefect.md): configuration, storage and troubleshooting.
-- [Image publishing](docs/docker-prefect.md#publish-to-ghcr): manual release steps and approval gates.
+- [Docker](docs/docker.md): Prefect, configuration, storage and troubleshooting.
+- [Image publishing](docs/docker.md#publish-to-ghcr): manual release steps and approval gates.
 
 The project uses [NYC TLC Green Taxi records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
 The original software notice remains in [LICENSE](LICENSE).

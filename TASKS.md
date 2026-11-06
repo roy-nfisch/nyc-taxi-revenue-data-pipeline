@@ -136,7 +136,7 @@ T08 and T09 were reviewed and merged in
   explicit project network, and separate persistent data/history volumes. Real
   container flow and plain-container command both processed the agreed period.
   CI uses an Ubuntu 26.04 Docker job with tiny synthetic inputs; native Python
-  jobs retain slim runners. See [run instructions](docs/docker-prefect.md).
+  jobs retain slim runners. See [run instructions](docs/docker.md).
   An optional Compose override mounts a trusted custom JSON file read-only for
   both run modes. Base Compose keeps packaged defaults; missing config paths fail
   without creating directories. Tests verify the mount rejects writes and a
@@ -444,6 +444,17 @@ not completed work or permission to publish.
   can be pulled without login and a fresh non-root run produces checked outputs.
   Record its digest and run instructions; publishing an image does not deploy a
   running service.
+
+  Release support prepared in a separate dependent PR: manual variant choice,
+  dedicated `nyc-taxi-revenue-data-pipeline-elt` package, ELT default command,
+  tested-image/digest checks and unchanged ETL package/tags. Offline tests cover
+  variant/date/branch rejection. No workflow dispatch or publication performed.
+  Verification: both final Docker targets built; 496 full-stack parallel tests
+  passed with Docker enabled, including five ELT image/preparation checks and
+  32 offline release-safety tests. Ruff lint/format and whitespace checks passed.
+  Before completion: merge the release PR, approve package/tag,
+  publish from main, verify package visibility and anonymous pull, run the fresh
+  image non-root and record its digest. These remain unchecked until performed.
 
 ### Parallel work and PR order
 
