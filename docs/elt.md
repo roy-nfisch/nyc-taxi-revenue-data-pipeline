@@ -89,6 +89,8 @@ the same classifications; the branches do not mean automatic parallel execution.
 ## Rules and limits
 
 - Raw loading preserves the original records and types. SQL checks the rides later.
+- Python support is limited to 3.13 because SQL's Unicode digit mapping follows
+  Python 3.13. Newer Python versions need a parity review before being supported.
 - Check pickup date, reporting period, then amount. Preserve zero and negative
   charges. Never guess dates, remove timezone information or round sub-cents.
 - Only selected file versions contribute. Changed files replace their own raw
