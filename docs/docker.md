@@ -221,7 +221,7 @@ publicly or mount the Docker socket. These local commands do not deploy a public
 
 The first ETL release, **2026.11.05**, is published and publicly downloadable.
 Publishing distributes the app, not the taxi data, and does not deploy Prefect.
-No ELT image has been published yet.
+The first ELT release, **2026.11.06**, is also publicly downloadable.
 
 Both variants use the same manual workflow:
 
@@ -247,6 +247,19 @@ when you need a fixed release. [Publication run](https://github.com/roy-nfisch/n
 The fresh verification used disposable container storage; ordinary Compose runs
 reuse their named data/history volumes.
 
+The ELT release was verified separately:
+
+| Release check | Verified result |
+|---|---|
+| Image | `ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline-elt:2026.11.06` |
+| Digest | `sha256:fc7918bf49ad2c7e24a751fd9ca163dd7d4d7a9923365cb3e84cea8340dd2f98` |
+| Source commit | `af6b6c3b070e54f858a92af8d4e9e27e04ea160f` |
+| Platform / user | Linux amd64 / UID 10001 |
+| Anonymous access | Dated tag pulled with an empty Docker login configuration |
+| Fresh run | 146,475 accepted rides, 90 daily facts, USD 3,395,290.56 |
+
+[ELT publication run](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/actions/runs/42219007427).
+
 For future owner-approved releases from reviewed `main`:
 
 1. In GitHub Actions, select **Publish pipeline image**, choose `main`, select
@@ -262,14 +275,14 @@ For future owner-approved releases from reviewed `main`:
 4. The owner must make the GHCR package public in its settings and verify an
    anonymous pull. A public repository does not establish public package access.
 
-After an ELT release, replace `VERSION` below with its published tag. Run these
-commands in a host terminal; the empty login configuration checks anonymous access:
+Run these commands in a host terminal; the empty login configuration checks
+anonymous access:
 
 ```bash
-docker --config "$(mktemp -d)" pull ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline-elt:VERSION
+docker --config "$(mktemp -d)" pull ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline-elt:2026.11.06
 docker run --rm --platform linux/amd64 \
   --mount type=volume,source=taxi-elt-release-data,target=/data \
-  ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline-elt:VERSION
+  ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline-elt:2026.11.06
 ```
 
 The run downloads any missing configured files and saves reports in the ELT
