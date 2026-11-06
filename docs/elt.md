@@ -5,6 +5,17 @@ the raw records into DuckDB, then transforms them with SQL. Both use the same
 downloads, data rules and report writer. Python connects the stages, DuckDB runs
 the SQL, and Prefect shows the stages and their status.
 
+## Why calculate in SQL?
+
+Once raw rides are in DuckDB, we can query them again: daily revenue, ride
+counts or days with negative charges. SQL describes the question; DuckDB filters,
+groups and adds the amounts. With pandas, those operations happen in Python.
+
+The database adds storage and maintenance. Python alone is sufficient for this
+small batch, and we have not demonstrated that SQL is faster or better here.
+We built both paths to learn the trade-offs and check that changing the approach
+does not change the results.
+
 ## Run a batch
 
 From the repository root:
@@ -83,8 +94,7 @@ the same classifications; the branches do not mean automatic parallel execution.
 - Only selected file versions contribute. Changed files replace their own raw
   data safely; failed loads stop the run before reporting. Unsupported types fail
   instead of being silently converted. Use one writer per storage directory.
-- Loading verifies one file in memory. The database adds storage and maintenance;
-  it is not automatically better than a small Python batch.
+- Loading verifies one file and its stored values in memory at a time.
 - Failed runs do not publish new success metadata. Existing reports belong to
   their earlier run. Multi-file publication is not one atomic transaction.
 
