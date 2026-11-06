@@ -65,6 +65,7 @@ To run the ELT comparison instead:
 
 ```bash
 uv run --locked --extra elt python -m green_taxi.elt
+cat data/elt/processed/metadata.json
 ```
 
 It reuses `data/raw/`, keeps its warehouse in `data/elt/warehouse.duckdb`, and
@@ -168,8 +169,15 @@ Reruns replace reports rather than appending them. Run only one batch per data d
 
 Both are manual batches, not continuous streams. The diagram shows two choices,
 not branches that automatically run in parallel. Downloading and report writing
-are shared; each path owns its calculation. See the [SQL flow](docs/elt.md#sql-flow)
-for the queries inside ELT.
+are shared; each path owns its calculation.
+
+`TaxiPipeline` and `ELTPipeline` connect the steps. `TaxiDownloader` checks and
+stages the source files. `DailyRevenueCalculator` applies the rules in Python;
+`TaxiWarehouse` loads raw records and runs SQL. Both paths use `ReportWriter`
+to check and save the reports.
+
+See [a ride-to-daily-total example](docs/elt.md#what-happens-to-the-data) or
+the [SQL flow](docs/elt.md#sql-flow) for a closer look.
 
 ## Results and limitations
 
