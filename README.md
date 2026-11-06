@@ -70,7 +70,7 @@ cat data/elt/processed/metadata.json
 
 It reuses `data/raw/`, keeps its warehouse in `data/elt/warehouse.duckdb`, and
 saves reports to `data/elt/processed/`. See the [ELT run guide](docs/elt.md)
-for Docker and Prefect commands. The published image below is **ETL only**.
+for Docker and Prefect commands. Separate ETL and ELT images are listed below.
 
 ## Run with Docker and Prefect
 
@@ -112,6 +112,16 @@ This runs the batch, not a public service. Reports persist in the named volume.
 The image is Linux amd64; Apple Silicon uses emulation. Native local builds remain
 available. See the [release guide](docs/docker.md#publish-to-ghcr)
 for verification and Compose instructions.
+
+To run the separate [public ELT image](https://github.com/users/roy-nfisch/packages/container/package/nyc-taxi-revenue-data-pipeline-elt):
+
+```bash
+docker run --rm --platform linux/amd64 \
+  --mount type=volume,source=nyc-taxi-elt-data,target=/data \
+  ghcr.io/roy-nfisch/nyc-taxi-revenue-data-pipeline-elt:2026.11.06
+```
+
+Its reports are saved in `/data/elt/processed/` inside the named volume.
 
 ### Follow a run
 

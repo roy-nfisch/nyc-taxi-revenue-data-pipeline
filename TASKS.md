@@ -13,10 +13,10 @@ course calls Prefect a bonus, but both tools are mandatory for our project.
 ## Current status
 
 ETL and ELT implementation, verification and landing-page work are merged.
-The portfolio entry is complete. The remaining release work is **T11.7**:
-approve and publish the ELT image, then verify public access and a fresh run.
-T12's documentation and code clarity improvements are implemented for owner
-review. Python checks passed; Docker verification was excluded from this change.
+The portfolio entry is complete. The ELT image is published and its public
+access and fresh run are verified; release documentation awaits review.
+T12's documentation and code clarity improvements were reviewed and merged in
+PR #21. Python checks passed; Docker verification was excluded from that local review.
 Earlier verification notes below describe checks at the time of each task.
 
 ## Done
@@ -338,13 +338,13 @@ and dotenv contract checks passed in the final Docker CI job.
 
 ## Optional follow-up — not a release requirement
 
-- [ ] **T11 — Explore an ELT version.** Design reviewed and merged in
+- [x] **T11 — Explore an ELT version.** Design reviewed and merged in
   [PR #11](https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline/pull/11);
   [ADR 002](docs/adr/002-elt-comparison.md): DuckDB, plain SQL, transactional raw
   loading and a separate optional execution path. T11.1–T11.6 and T11.8 are
   reviewed and merged: both paths produce matching reports on the reviewed data.
-  ETL remains the default and comparison baseline. The overall task stays open
-  until the ELT image release is verified under T11.7.
+  ETL remains the default and comparison baseline. The ELT image release is
+  verified under T11.7.
   GPT-6 Astra and GPT-6.1 Terra reviewed the proposal. The owner accepted their
   clarifications: preserve raw types without turning invalid rows into batch
   failures, verify installed-package/container execution and ETL without extras,
@@ -438,12 +438,12 @@ work; implementing a workflow is not permission to publish.
   all daily values, calendar rows and counters on two SQL reruns:
   146,486 read, 146,475 accepted, 90 dates and USD 3,395,290.56.
   Storage/memory/maintenance costs and manual commands are in the run guide.
-  Runtime review and merge are complete; ELT image publication remains in T11.7.
+  Runtime review and merge are complete; the ELT image release is in T11.7.
   Documentation review consolidated five ELT guides into `docs/elt.md`, retaining
   the flow diagram and runnable examples. Detailed interfaces stay in ADR 002;
   ELT docstrings now describe inputs, results, side effects and failures consistently.
 
-- [ ] **T11.7 — Publish the reviewed ELT image.** Depends on merged T11.6, passing
+- [x] **T11.7 — Publish the reviewed ELT image.** Depends on merged T11.6, passing
   release checks and explicit owner approval. Agree an ELT image variant/package
   and dated tag; do not overwrite the published ETL version or silently move its
   `latest` tag to ELT. **PR boundary:** a focused workflow/docs PR if release
@@ -456,13 +456,15 @@ work; implementing a workflow is not permission to publish.
   Release support reviewed and merged in PR #19: manual variant choice,
   dedicated `nyc-taxi-revenue-data-pipeline-elt` package, ELT default command,
   tested-image/digest checks and unchanged ETL package/tags. Offline tests cover
-  variant/date/branch rejection. No workflow dispatch or publication performed.
+  variant/date/branch rejection.
   Verification: both final Docker targets built; 496 full-stack parallel tests
   passed with Docker enabled, including five ELT image/preparation checks and
   32 offline release-safety tests. Ruff lint/format and whitespace checks passed.
-  Before completion: approve package/tag,
-  publish from main, verify package visibility and anonymous pull, run the fresh
-  image non-root and record its digest. These remain unchecked until performed.
+  Published `2026.11.06` from main after owner approval. The publication workflow
+  passed its full tests and published-image checks. An anonymous pull succeeded;
+  a fresh run as UID 10001 produced 146,475 accepted rides, 90 daily facts and
+  USD 3,395,290.56. The image digest and commands are recorded in the Docker guide.
+  No service was deployed. Release documentation remains uncommitted for review.
 
 - [x] **T11.8 — Explain ETL and ELT on the project landing page.** Added a
   pipeline diagram and updated the README's commands, results and overview.
@@ -488,8 +490,7 @@ T11.1 → T11.2 → T11.3 / T11.4 / T11.5 in parallel → T11.6 → T11.7.
 
 ## Follow-up — project clarity
 
-- [ ] **T12 — Make the project easier to follow.** Documentation changes await
-  owner review; the code clarity changes passed Python verification.
+- [x] **T12 — Make the project easier to follow.** Reviewed and merged in PR #21.
   Refine the README and linked explanations so a new reader can understand the
   pipeline before its internals.
   - Show the ETL and ELT paths in a small diagram, with plain stage names.
@@ -523,10 +524,11 @@ T11.1 → T11.2 → T11.3 / T11.4 / T11.5 in parallel → T11.6 → T11.7.
   Verification: 481 Python tests passed with the ELT extra; 186 unit tests passed
   after syncing default dependencies and confirming DuckDB was absent. Lint,
   formatting and whitespace checks passed. No Docker tests, real-data downloads
-  or publishing were performed. Owner review remains before completion.
-  A second clarity pass adds a reading guide to the SQL classification stages.
-  This latest documentation-only change has not been tested; review and parity
-  checks remain before treating the full clarity work as complete.
+  or publishing were performed during that review. A second clarity pass added a
+  reading guide to the SQL classification stages. The subsequent review passed
+  283 ETL/ELT tests, including Prefect integration, and 118 SQL parity tests.
+  Python support was limited to 3.13 after a Unicode mapping compatibility review.
+  Matching screenshots show completed local ETL and ELT Prefect runs.
 
 ## Working agreement
 
