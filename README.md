@@ -125,6 +125,12 @@ Each flow reuses its plain Python pipeline's objects and rules.
 
 *An actual ETL run: bars show timings and arrows show dependencies.*
 
+<p align="center">
+  <a href="docs/assets/prefect-elt-run.jpg"><img src="docs/assets/prefect-elt-run.jpg" width="850" alt="Completed Prefect ELT run with download, raw loading, SQL transformation and report saving tasks"></a>
+</p>
+
+*An actual ELT run: the raw load comes before the SQL transformation.*
+
 Runs start manually. Logs show each stage and the final totals; temporary download
 failures get up to three attempts. Prefect is a local run view, not a revenue dashboard.
 
@@ -260,7 +266,7 @@ nyc-taxi-revenue-data-pipeline/
 │   └── docker/                     # Image and Compose checks
 ├── notebooks/                      # Optional data exploration
 ├── docs/                           # Design, data review and run guide
-│   └── assets/                     # Pipeline diagram, terminal GIF and ETL screenshot
+│   └── assets/                     # Pipeline diagram, terminal GIF and Prefect screenshots
 ├── data/                           # Generated locally; ignored by Git
 │   ├── raw/                        # Staged source files
 │   ├── processed/                  # ETL facts, date dimension and metadata
