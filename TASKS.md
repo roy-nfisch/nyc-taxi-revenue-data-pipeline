@@ -456,6 +456,10 @@ not completed work or permission to publish.
   publish from main, verify package visibility and anonymous pull, run the fresh
   image non-root and record its digest. These remain unchecked until performed.
 
+- [x] **T11.8 — Explain ETL and ELT on the project landing page.** Added a
+  pipeline diagram and updated the README's commands, results and overview.
+  Documentation is under review in PR #20; it does not publish an image.
+
 ### Parallel work and PR order
 
 T11.1 → T11.2 → T11.3 / T11.4 / T11.5 in parallel → T11.6 → T11.7.
