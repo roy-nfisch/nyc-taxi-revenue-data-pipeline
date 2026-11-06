@@ -101,7 +101,7 @@ the same classifications; the branches do not mean automatic parallel execution.
 See [the ADR](adr/002-elt-comparison.md) for object responsibilities, supported
 types, SQL interfaces and resource limits.
 
-For a reviewed release, see [publish to GHCR](docker-prefect.md#publish-to-ghcr).
+For a reviewed release, see [publish to GHCR](docker.md#publish-to-ghcr).
 Publishing is manual; merging code does not publish an image or start a service.
 
 ## Check it

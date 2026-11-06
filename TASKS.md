@@ -136,7 +136,7 @@ T08 and T09 were reviewed and merged in
   explicit project network, and separate persistent data/history volumes. Real
   container flow and plain-container command both processed the agreed period.
   CI uses an Ubuntu 26.04 Docker job with tiny synthetic inputs; native Python
-  jobs retain slim runners. See [run instructions](docs/docker-prefect.md).
+  jobs retain slim runners. See [run instructions](docs/docker.md).
   An optional Compose override mounts a trusted custom JSON file read-only for
   both run modes. Base Compose keeps packaged defaults; missing config paths fail
   without creating directories. Tests verify the mount rejects writes and a

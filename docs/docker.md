@@ -1,4 +1,4 @@
-# Run with Docker and Prefect
+# Docker: run and publish
 
 Docker packages our existing Python application. Prefect adds task states and
 bounded download retries; it does not replace the data rules. Both entry points
@@ -6,8 +6,9 @@ reuse `TaxiPipeline.from_settings()` and the same downloader/calculator/writer.
 
 The stage implementations live in `src/green_taxi/etl/`. The existing
 `python -m green_taxi.flow` command is a thin delegate to that flow, so Compose
-commands and server settings are unchanged. This guide still runs Python ETL,
-not the proposed database-first ELT path.
+commands and server settings are unchanged. The run commands below use Python
+ETL; see [the ELT guide](elt.md) for DuckDB commands. The publishing section
+covers both images.
 
 ## Start and run
 
