@@ -164,8 +164,8 @@ It does not process a continuous stream.
 `TaxiPipeline` connects `TaxiDownloader`, `DailyRevenueCalculator` and
 `ReportWriter`, keeping each responsibility separate.
 
-ELT is being developed separately. The [ELT Docker image](docs/elt-docker.md)
-checks DuckDB and packaged SQL; there is no end-to-end ELT command yet.
+The separate [ELT pipeline](docs/elt.md) loads raw files into DuckDB
+before running SQL. It produces the same report in its own output directory.
 
 ## Results and limitations
 
@@ -228,6 +228,7 @@ nyc-taxi-revenue-data-pipeline/
 │   ├── settings.py, defaults.json  # Validated run settings
 │   ├── download.py                 # Download and check raw files
 │   ├── reporting.py                # Shared result, calendar and money helpers
+│   ├── run_report.py               # Shared run identity and publication
 │   ├── report.py                   # Check and save the report
 │   ├── flow.py                     # Delegate for the existing Prefect command
 │   ├── __main__.py, logging.py     # Terminal entry point and logs
@@ -235,7 +236,7 @@ nyc-taxi-revenue-data-pipeline/
 │   │   ├── revenue.py              # Apply rules and calculate daily totals
 │   │   ├── pipeline.py             # Connect the existing stage objects
 │   │   └── flow.py                 # Prefect tasks and flow
-│   └── elt/sql/schema.sql          # Optional registry DDL; no ELT pipeline yet
+│   └── elt/                        # Warehouse, SQL, batch command and Prefect flow
 ├── tests/
 │   ├── green_taxi/                 # Shared component tests and fixtures
 │   │   ├── etl/                    # Mirrors the Python ETL modules
@@ -270,7 +271,7 @@ its named volume rather than the host `data/` directory.
 ## Project notes
 
 - [Design decisions](docs/adr/001-pipeline-design.md): scope, data rules and object responsibilities.
-- [ELT design](docs/adr/002-elt-comparison.md) and [contracts](docs/etl-elt-contract.md): the database-first comparison.
+- [ELT guide](docs/elt.md) and [design decisions](docs/adr/002-elt-comparison.md): the database-first comparison.
 - [Real-data review](docs/data-review.md): source identities, reconciliation and repeat-run evidence.
 - [Docker and Prefect](docs/docker-prefect.md): configuration, storage and troubleshooting.
 - [Image publishing](docs/docker-prefect.md#publish-to-ghcr): manual release steps and approval gates.

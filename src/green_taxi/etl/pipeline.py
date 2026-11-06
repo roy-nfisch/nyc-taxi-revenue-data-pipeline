@@ -1,58 +1,22 @@
 """Connect staging, calculation, and report writing without copying their rules."""
 
 import logging
-import os
-import subprocess
-from datetime import datetime, timezone
+from importlib.metadata import version
 from pathlib import Path
-from uuid import uuid4
 
-from green_taxi.download import StagedFile, TaxiDownloader
+from green_taxi.download import TaxiDownloader
 from green_taxi.etl.revenue import DailyRevenueCalculator
 from green_taxi.report import ReportWriter
-from green_taxi.reporting import RevenueResult
+from green_taxi.run_report import RunReport
+from green_taxi.run_report import code_identity as run_code_identity
 from green_taxi.settings import PipelineSettings
 
 logger = logging.getLogger("green_taxi.pipeline")
 
 
 def code_identity() -> dict:
-    """Return checkout revision/dirty status, or explicit unknowns when unavailable.
-
-    Inspect only this package's checkout, not an unrelated caller's repository.
-    Installed wheels report supplied build metadata, or explicit unknowns. Git calls are
-    bounded and read-only; unavailable Git does not prevent data processing.
-    """
-    root = Path(__file__).resolve().parents[3]
-    unknown = {"revision": "unknown", "dirty": "unknown"}
-    if not (root / ".git").exists():
-        dirty = {"true": True, "false": False}.get(
-            os.environ.get("GREEN_TAXI_BUILD_DIRTY", ""), "unknown"
-        )
-        return {
-            "revision": os.environ.get("GREEN_TAXI_BUILD_REVISION") or "unknown",
-            "dirty": dirty,
-        }
-    try:
-        revision = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=root,
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=2,
-        ).stdout.strip()
-        status = subprocess.run(
-            ["git", "status", "--porcelain"],
-            cwd=root,
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=2,
-        ).stdout
-    except (OSError, subprocess.SubprocessError):
-        return unknown
-    return {"revision": revision, "dirty": bool(status)}
+    """Return provenance for this checkout or the installed build."""
+    return run_code_identity(Path(__file__).resolve().parents[3])
 
 
 class TaxiPipeline:
@@ -75,6 +39,7 @@ class TaxiPipeline:
         self.downloader = downloader
         self.calculator = calculator
         self.writer = writer
+        self.reporting = RunReport(settings, writer)
 
     def run(self, *, force: bool = False) -> Path:
         """Stage inputs, calculate, and save; return the successful metadata path.
@@ -100,37 +65,12 @@ class TaxiPipeline:
         )
 
     def start_run(self) -> dict:
-        """Create UTC start time, UUID, and code identity before any stage runs."""
-        context = {
-            "run_id": str(uuid4()),
-            "started_at": datetime.now(timezone.utc).isoformat(),
-            "code": code_identity(),
+        """Start a run using the shared metadata contract."""
+        return self.reporting.start_run(code_identity()) | {
+            "execution_mode": "etl",
+            "engine": {"name": "pandas", "version": version("pandas")},
         }
-        logger.info("Starting run %s", context["run_id"])
-        return context
 
-    def save(
-        self, inputs: tuple[StagedFile, ...], result: RevenueResult, context: dict
-    ) -> Path:
-        """Add input lineage, publish checked outputs, and return metadata path.
-
-        Both execution paths call this method; neither copies the metadata rules.
-        Writer failures propagate without a completed-run log message.
-        """
-        metadata = context | {
-            "inputs": [
-                {
-                    "filename": item.path.name,
-                    "month": item.month,
-                    "source_url": item.source_url if item.downloaded else None,
-                    "configured_source_url": item.source_url,
-                    "size_bytes": item.size_bytes,
-                    "sha256": item.sha256,
-                    "downloaded": item.downloaded,
-                }
-                for item in inputs
-            ],
-        }
-        path = self.writer.write(result, self.settings.reporting_period, metadata)
-        logger.info("Completed run %s", context["run_id"])
-        return path
+    def save(self, inputs, result, context) -> Path:
+        """Publish through the shared writer and lineage contract."""
+        return self.reporting.save(inputs, result, context)

@@ -1,5 +1,21 @@
-# Optional preparation tools only; the ELT pipeline is not implemented yet.
+# Explicit ELT services; default ETL services are unchanged.
 services:
+  elt:
+    extends:
+      service: elt-tools
+    command: [python, -m, green_taxi.elt, --data-dir, /data]
+
+  elt-flow:
+    extends:
+      service: elt-tools
+    command: [python, -m, green_taxi.elt.flow, --data-dir, /data]
+    environment:
+      PREFECT_API_URL: http://prefect:4200/api
+      PREFECT_SERVER_ALLOW_EPHEMERAL_MODE: "false"
+    depends_on:
+      prefect:
+        condition: service_healthy
+
   elt-tools:
     init: true
     profiles: [manual]

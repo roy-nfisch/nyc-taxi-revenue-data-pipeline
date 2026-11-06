@@ -1,9 +1,8 @@
 # Compare ETL and ELT
 
-Status: design merged in PR #11; ETL folder separation merged in PR #12;
-optional dependency and registry foundation merged in PR #13. Loading, SQL and
-Docker preparation are reviewed in separate component PRs. There is no end-to-end
-ELT command yet; TASKS.md records each component's delivery status.
+ETL and ELT share one package and report contract. The database-first path uses
+checked raw loading, exact SQL transformations and its own output directory.
+See [running ELT](../elt.md) for the Python, Docker and Prefect commands.
 
 ## Why add this
 
@@ -21,14 +20,14 @@ the same rules. We will also document the extra storage and maintenance they add
 Use **DuckDB**, stored as one local database file. It keeps this educational
 comparison runnable without another server, account or set of credentials.
 PostgreSQL would suit a shared service better, but is not needed for this first
-comparison. Start with plain SQL; adding dbt is a separate decision, not a
-requirement for ELT.
+comparison. DuckDB runs our plain SQL directly. We do not use dbt: managing a
+dbt project is not needed for this small comparison.
 
 Prefect coordinates download, raw load, transform and save. It does not own the
 SQL or copy the data rules. Local Python and Docker use the same objects.
 
 The concrete raw-storage layout, warehouse operation contracts and responsibilities
-are recorded in the [ETL and ELT contracts](../etl-elt-contract.md). Raw records use
+are recorded in the [ELT guide](../elt.md). Raw records use
 one table per source file, with original Arrow schema metadata stored in the
 source registry rather than forcing different files into one common column type.
 
@@ -93,7 +92,7 @@ with the rest of the project dependencies.
 |---|---|---|
 | Python | Existing | Connect small objects and provide the manual entry point. |
 | DuckDB | New, optional | Store raw records in a local database, replace source data transactionally and execute SQL. |
-| Plain SQL | New transformation files | Classify records, count exclusions and calculate daily revenue inside the database. No dbt initially. |
+| Plain SQL | New transformation files | Classify records, count exclusions and calculate daily revenue inside the database. |
 | pandas and PyArrow | Existing | Keep the current Parquet I/O and report contract; do not move ELT's business transformations back into pandas. |
 | Requests and Pydantic | Existing | Reuse checked downloads and validated settings. |
 | Prefect | Existing | Coordinate download, raw load, SQL transformation and publication. |
@@ -101,13 +100,11 @@ with the rest of the project dependencies.
 | pytest and pytest-xdist | Existing | Check raw loading, ETL/ELT equivalence, reruns and packaged execution using shared fixtures. |
 | uv, setuptools, Ruff and GitHub Actions | Existing | Lock/install dependencies, package SQL resources, check code and run automated verification. |
 
-No PostgreSQL server, dbt project or new orchestration framework is proposed.
+No additional database server or orchestration framework is required.
 
-## Proposed file tree
+## File layout
 
-This shows the intended full layout. ETL/shared separation is implemented; the
-`elt/` package currently contains only the foundation registry SQL and tests.
-ELT loading, transformation, orchestration and storage are not built yet.
+This shows the main responsibilities of the two paths.
 ETL and ELT become sibling folders inside the same package. Shared components stay outside both;
 moving files must not duplicate their implementations or change ETL behaviour.
 Only the parts relevant to the comparison are shown.
@@ -234,10 +231,39 @@ facts and USD 3,395,290.56; changed files require fresh reconciliation.
 The design was reviewed and merged in PR #11:
 
 - DuckDB rather than PostgreSQL for the first comparison.
-- Plain SQL rather than adding dbt initially.
+- Plain SQL executed directly by DuckDB.
 - A separate optional ELT path while retaining ETL as the default.
 
-The ETL folder move is merged. The current foundation adds the optional dependency,
-registry DDL and contracts only. Loading, SQL business transformations, ELT images
-and persistent data storage are developed separately. The per-source query
-boundary is specified in the foundation contract.
+The per-source query boundary is specified in the shared contract. A separate
+ELT coordinator connects loading, SQL and publication without changing the
+default ETL command or its storage.
+
+## Storage and SQL interface
+
+The loader creates one native `raw.source_YYYY_MM` table per selected file.
+`loaded_sources` keeps filename, table name, SHA-256, byte size, row count and
+serialized Arrow schema. Identity is source-scoped; equal bytes under distinct
+valid filenames remain distinct sources. Only the loader updates the registry.
+Raw values and type distinctions must round-trip without loss, including
+booleans, timezone awareness, nanosecond timestamps and floating-point bits.
+Required pickup types are date, timestamp, numeric, text, boolean or null;
+amount types are numeric, text, boolean or null. Other raw scalar columns are
+verified too; nested/dictionary/extension/decimal256/time/duration types are unsupported.
+
+The warehouse validates and quotes raw table identifiers. SQL resources are
+installed package data, read through `importlib.resources`, not the current directory.
+Bind `period_start`, `period_end`, `pickup_kind` and `amount_kind` separately.
+Kind labels describe original Arrow types, not values guessed after conversion.
+
+Classification returns `service_date DATE`, `status VARCHAR` and exact
+`amount_cents BIGNUM`. Status is accepted, invalid_pickup, outside_period,
+invalid_amount or sub_cent. Preserve that exclusion order; any in-period sub-cent
+fails the run rather than becoming an exclusion. Combine only normalized
+classifications, retaining every row. Counters return `COUNT_FIELDS` plus
+`sub_cent`; zero accepted rows also fail. SQL owns all revenue aggregation.
+The result adapter converts integer strings without floats, builds the shared
+calendar and returns `RevenueResult`. It never publishes files itself.
+
+Money-text normalization follows Python 3.13's Unicode digit rules. SQL raises a
+resource-limit error before allocating more than 100,000 integer-cent digits;
+it does not round or count that failure as an excluded ride.
