@@ -20,8 +20,8 @@ the same rules. We will also document the extra storage and maintenance they add
 Use **DuckDB**, stored as one local database file. It keeps this educational
 comparison runnable without another server, account or set of credentials.
 PostgreSQL would suit a shared service better, but is not needed for this first
-comparison. Start with plain SQL; adding dbt is a separate decision, not a
-requirement for ELT.
+comparison. DuckDB runs our plain SQL directly. We do not use dbt: managing a
+dbt project is not needed for this small comparison.
 
 Prefect coordinates download, raw load, transform and save. It does not own the
 SQL or copy the data rules. Local Python and Docker use the same objects.
@@ -92,7 +92,7 @@ with the rest of the project dependencies.
 |---|---|---|
 | Python | Existing | Connect small objects and provide the manual entry point. |
 | DuckDB | New, optional | Store raw records in a local database, replace source data transactionally and execute SQL. |
-| Plain SQL | New transformation files | Classify records, count exclusions and calculate daily revenue inside the database. No dbt initially. |
+| Plain SQL | New transformation files | Classify records, count exclusions and calculate daily revenue inside the database. |
 | pandas and PyArrow | Existing | Keep the current Parquet I/O and report contract; do not move ELT's business transformations back into pandas. |
 | Requests and Pydantic | Existing | Reuse checked downloads and validated settings. |
 | Prefect | Existing | Coordinate download, raw load, SQL transformation and publication. |
@@ -100,7 +100,7 @@ with the rest of the project dependencies.
 | pytest and pytest-xdist | Existing | Check raw loading, ETL/ELT equivalence, reruns and packaged execution using shared fixtures. |
 | uv, setuptools, Ruff and GitHub Actions | Existing | Lock/install dependencies, package SQL resources, check code and run automated verification. |
 
-No PostgreSQL server, dbt project or new orchestration framework is proposed.
+No additional database server or orchestration framework is required.
 
 ## File layout
 
@@ -231,7 +231,7 @@ facts and USD 3,395,290.56; changed files require fresh reconciliation.
 The design was reviewed and merged in PR #11:
 
 - DuckDB rather than PostgreSQL for the first comparison.
-- Plain SQL rather than adding dbt initially.
+- Plain SQL executed directly by DuckDB.
 - A separate optional ELT path while retaining ETL as the default.
 
 The per-source query boundary is specified in the shared contract. A separate
@@ -263,3 +263,7 @@ classifications, retaining every row. Counters return `COUNT_FIELDS` plus
 `sub_cent`; zero accepted rows also fail. SQL owns all revenue aggregation.
 The result adapter converts integer strings without floats, builds the shared
 calendar and returns `RevenueResult`. It never publishes files itself.
+
+Money-text normalization follows Python 3.13's Unicode digit rules. SQL raises a
+resource-limit error before allocating more than 100,000 integer-cent digits;
+it does not round or count that failure as an excluded ride.

@@ -2,8 +2,8 @@
 
 ETL transforms taxi records in Python before saving reports. ELT first loads
 the raw records into DuckDB, then transforms them with SQL. Both use the same
-downloads, data rules and checked report writer. We use plain SQL, not dbt;
-Prefect coordinates the work.
+downloads, data rules and report writer. Python connects the stages, DuckDB runs
+the SQL, and Prefect shows the stages and their status.
 
 ## Run a batch
 
@@ -35,14 +35,8 @@ docker compose -f compose.yaml -f compose.elt.yaml run --rm elt-flow
 
 Check that port 4205 is free, then open [local Prefect](http://127.0.0.1:4205).
 No schedule is created. Stop the server with `docker compose down`; data is retained.
-For local Python with an existing server, set `PREFECT_API_URL` and run
-`uv run --locked --extra elt python -m green_taxi.elt.flow`.
-The `elt-tools` service only inspects dependencies; it does not process rides.
 
 ## What happens to the data?
-
-`ELTPipeline` connects the stages. `TaxiWarehouse` owns the connection and raw
-tables; `WarehouseQueries` runs SQL; `RunReport` and `ReportWriter` save the result.
 
 | Location | Contents |
 |---|---|
@@ -83,23 +77,19 @@ the same classifications; the branches do not mean automatic parallel execution.
 
 ## Rules and limits
 
-- Raw loading preserves columns, types and duplicate rows. Original Arrow schema
-  metadata stays in the registry. Invalid ride values are classified later.
+- Raw loading preserves the original records and types. SQL checks the rides later.
 - Check pickup date, reporting period, then amount. Preserve zero and negative
   charges. Never guess dates, remove timezone information or round sub-cents.
-- Only selected, matching file versions contribute. Changed sources replace
-  their raw table and registry entry together. A failed source rolls back;
-  earlier completed loads remain available, but the run stops before reporting.
-- Use one writer per storage directory. Unsupported or lossy schemas fail:
-  flat scalar types are checked; nested, extension and decimal256 types are unsupported.
-- Loading verifies one file and its stored values in memory. ELT adds disk usage
-  and SQL/engine maintenance; it is not automatically better than a small Python batch.
-- Money parsing follows Python 3.13, including Unicode digits. SQL stops if an
-  amount needs more than 100,000 integer-cent digits rather than allocating endlessly.
+- Only selected file versions contribute. Changed files replace their own raw
+  data safely; failed loads stop the run before reporting. Unsupported types fail
+  instead of being silently converted. Use one writer per storage directory.
+- Loading verifies one file in memory. The database adds storage and maintenance;
+  it is not automatically better than a small Python batch.
 - Failed runs do not publish new success metadata. Existing reports belong to
   their earlier run. Multi-file publication is not one atomic transaction.
 
-See [the ADR](adr/002-elt-comparison.md) for design and SQL interface details.
+See [the ADR](adr/002-elt-comparison.md) for object responsibilities, supported
+types, SQL interfaces and resource limits.
 
 ## Check it
 
