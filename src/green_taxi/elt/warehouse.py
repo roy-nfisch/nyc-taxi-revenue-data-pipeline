@@ -43,6 +43,24 @@ def _supported_type(kind: pa.DataType) -> bool:
     return any(check(kind) for check in checks)
 
 
+def _supported_required_type(name: str, kind: pa.DataType) -> bool:
+    """Allow common scalar inputs; pickup dates can also use date types."""
+    common_types = (
+        pa.types.is_integer,
+        pa.types.is_floating,
+        pa.types.is_decimal128,
+        pa.types.is_boolean,
+        pa.types.is_null,
+        pa.types.is_string,
+        pa.types.is_large_string,
+    )
+    if any(check(kind) for check in common_types):
+        return True
+    return name == "lpep_pickup_datetime" and (
+        pa.types.is_date(kind) or pa.types.is_timestamp(kind)
+    )
+
+
 def _validate_schema(schema: pa.Schema) -> None:
     """Reject missing, ambiguous or unsupported columns before changing storage."""
     names = schema.names
@@ -55,16 +73,12 @@ def _validate_schema(schema: pa.Schema) -> None:
     for field in schema:
         if not _supported_type(field.type):
             raise ValueError(f"Unsupported raw type for {field.name}: {field.type}")
-        kind = field.type
-        numeric = pa.types.is_integer(kind) or pa.types.is_floating(kind)
-        numeric = numeric or pa.types.is_decimal128(kind)
-        common = numeric or pa.types.is_boolean(kind) or pa.types.is_null(kind)
-        common = common or pa.types.is_string(kind) or pa.types.is_large_string(kind)
-        pickup = pa.types.is_date(kind) or pa.types.is_timestamp(kind)
-        if field.name in REQUIRED_COLUMNS and not (
-            common or (field.name == "lpep_pickup_datetime" and pickup)
+        if field.name in REQUIRED_COLUMNS and not _supported_required_type(
+            field.name, field.type
         ):
-            raise ValueError(f"Unsupported required-column type: {field.name}: {kind}")
+            raise ValueError(
+                f"Unsupported required-column type: {field.name}: {field.type}"
+            )
 
 
 def _verify_bytes(item: StagedFile, content: bytes) -> None:

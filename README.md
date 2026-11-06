@@ -65,6 +65,7 @@ To run the ELT comparison instead:
 
 ```bash
 uv run --locked --extra elt python -m green_taxi.elt
+cat data/elt/processed/metadata.json
 ```
 
 It reuses `data/raw/`, keeps its warehouse in `data/elt/warehouse.duckdb`, and
@@ -124,6 +125,12 @@ Each flow reuses its plain Python pipeline's objects and rules.
 
 *An actual ETL run: bars show timings and arrows show dependencies.*
 
+<p align="center">
+  <a href="docs/assets/prefect-elt-run.jpg"><img src="docs/assets/prefect-elt-run.jpg" width="850" alt="Completed Prefect ELT run with download, raw loading, SQL transformation and report saving tasks"></a>
+</p>
+
+*An actual ELT run: the raw load comes before the SQL transformation.*
+
 Runs start manually. Logs show each stage and the final totals; temporary download
 failures get up to three attempts. Prefect is a local run view, not a revenue dashboard.
 
@@ -168,8 +175,15 @@ Reruns replace reports rather than appending them. Run only one batch per data d
 
 Both are manual batches, not continuous streams. The diagram shows two choices,
 not branches that automatically run in parallel. Downloading and report writing
-are shared; each path owns its calculation. See the [SQL flow](docs/elt.md#sql-flow)
-for the queries inside ELT.
+are shared; each path owns its calculation.
+
+`TaxiPipeline` and `ELTPipeline` connect the steps. `TaxiDownloader` checks and
+stages the source files. `DailyRevenueCalculator` applies the rules in Python;
+`TaxiWarehouse` loads raw records and runs SQL. Both paths use `ReportWriter`
+to check and save the reports.
+
+See [a ride-to-daily-total example](docs/elt.md#what-happens-to-the-data) or
+the [SQL flow](docs/elt.md#sql-flow) for a closer look.
 
 ## Results and limitations
 
@@ -252,7 +266,7 @@ nyc-taxi-revenue-data-pipeline/
 │   └── docker/                     # Image and Compose checks
 ├── notebooks/                      # Optional data exploration
 ├── docs/                           # Design, data review and run guide
-│   └── assets/                     # Pipeline diagram, terminal GIF and ETL screenshot
+│   └── assets/                     # Pipeline diagram, terminal GIF and Prefect screenshots
 ├── data/                           # Generated locally; ignored by Git
 │   ├── raw/                        # Staged source files
 │   ├── processed/                  # ETL facts, date dimension and metadata

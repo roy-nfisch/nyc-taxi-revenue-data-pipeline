@@ -1,7 +1,7 @@
 [project]
 name = "nyc-taxi-revenue-data-pipeline"
 version = "0.1.0"
-requires-python = ">=3.13.17"
+requires-python = ">=3.13.17,<3.14"
 dependencies = [
     "click>=8.5.0",
     "pandas>=3.0.5",
