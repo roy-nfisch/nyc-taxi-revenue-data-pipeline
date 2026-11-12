@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>NYC Taxi Pipeline: Engineering Decisions</title>
+  <style>
+    :root { --ink: #252629; --orange: #ff4b12; --purple: #8034ff; --aqua: #7dd4df; --muted: #5d6068; --line: #e1e1e6; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 94px; }
+    body { margin: 0; color: var(--ink); background: #fff; font-family: Arial, Helvetica, sans-serif; }
+    a { color: inherit; text-underline-offset: 4px; }
+    button, summary { cursor: pointer; font: inherit; }
+    a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid var(--purple); outline-offset: 5px; }
+    .hero { background: var(--ink); color: #f5f5f8; border-bottom: 8px solid var(--orange); }
+    .hero-inner { max-width: 1150px; padding: 64px 36px 58px; margin: auto; }
+    .kicker { color: #ff794f; font-size: 16px; letter-spacing: .07em; text-transform: uppercase; margin: 0 0 30px; }
+    h1 { font-size: clamp(44px, 6.5vw, 80px); letter-spacing: -.045em; line-height: 1.05; margin: 0 0 26px; max-width: 950px; }
+    .intro { font-size: clamp(20px, 2.4vw, 28px); line-height: 1.4; max-width: 850px; margin: 0; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 12px 26px; font-size: 15px; color: #d0d0d6; margin-top: 34px; }
+    .nav { position: sticky; top: 0; z-index: 2; background: #fff; border-bottom: 1px solid var(--line); }
+    .nav-inner { max-width: 1150px; margin: auto; padding: 0 36px; display: flex; align-items: stretch; }
+    .nav a { text-decoration: none; font-size: 15px; padding: 22px 18px; border-bottom: 3px solid transparent; }
+    .nav a:first-child { padding-left: 0; }
+    .nav a:hover, .nav a[aria-current] { border-bottom-color: var(--orange); }
+    .nav button { margin-left: auto; border: 0; background: transparent; padding: 14px; color: var(--muted); font-size: 14px; }
+    main { max-width: 1080px; padding: 0 36px; margin: auto; }
+    section { padding: 62px 0; border-bottom: 1px solid var(--line); }
+    .section-meta { display: flex; align-items: center; gap: 15px; color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+    .number { display: inline-grid; place-items: center; background: var(--orange); color: #fff; width: 32px; height: 32px; font-weight: bold; }
+    h2 { font-size: clamp(30px, 3.8vw, 44px); letter-spacing: -.035em; line-height: 1.16; margin: 0 0 28px; }
+    h3 { font-size: 23px; letter-spacing: -.02em; margin: 36px 0 16px; }
+    p { max-width: 810px; font-size: 21px; line-height: 1.65; margin: 0 0 22px; }
+    .question { border-left: 4px solid var(--orange); padding-left: 24px; margin: 28px 0 0; font-size: 25px; line-height: 1.5; }
+    details { margin-top: 30px; border: 1px solid var(--line); }
+    summary { font-size: 18px; font-weight: bold; padding: 20px 24px; background: #f5f5f8; }
+    summary:hover { background: #eeeef3; }
+    details[open] summary { border-bottom: 1px solid var(--line); }
+    summary::marker { color: var(--orange); }
+    .detail-body { padding: 24px; }
+    .detail-body > :last-child { margin-bottom: 0; }
+    details[open] > .detail-body, details[open] > .visual { animation: reveal .3s ease-out; }
+    @keyframes reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .visual { padding: 24px; }
+    .visual p, figcaption { font-size: 16px; color: var(--muted); line-height: 1.6; }
+    figure { margin: 0; }
+    img { display: block; width: 100%; height: auto; }
+    video { display: block; width: 100%; max-height: 540px; background: var(--ink); }
+    figcaption { margin-top: 16px; }
+    figcaption ul { margin: 12px 0 0; padding-left: 24px; }
+    figcaption li { margin-bottom: 8px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+    .tabs button { border: 1px solid var(--line); background: #fff; padding: 11px 22px; font-size: 16px; }
+    .tabs button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+    [hidden] { display: none !important; }
+    .closing { border: 0; }
+    .closing .question { border-color: var(--purple); font-size: clamp(25px, 3vw, 34px); }
+    footer { background: var(--ink); color: #eeeef2; padding: 32px 36px; }
+    .footer-inner { max-width: 1008px; margin: auto; }
+    footer p { font-size: 15px; color: #d0d0d6; margin: 0 0 18px; }
+    .links { display: flex; flex-wrap: wrap; gap: 14px 24px; font-size: 15px; }
+    .back-top { display: inline-block; margin-top: 30px; font-size: 15px; }
+    @media (max-width: 640px) {
+      .hero-inner { padding: 44px 24px; }
+      main { padding: 0 24px; }
+      section { padding: 40px 0; }
+      p { font-size: 19px; }
+      .nav-inner { padding: 0 12px; flex-wrap: wrap; }
+      .nav a { padding: 15px 9px; font-size: 13px; }
+      .nav a:first-child { padding-left: 9px; }
+      .nav button { font-size: 12px; padding: 10px 6px; }
+      .visual { padding: 14px; }
+      .question { padding-left: 18px; font-size: 22px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      details[open] > .detail-body, details[open] > .visual { animation: none; }
+    }
+    @media print {
+      .nav, .tabs, .back-top { display: none; }
+      .hero { color: var(--ink); background: #fff; }
+      .kicker, .hero-meta { color: var(--muted); }
+      main { max-width: none; }
+      p { font-size: 13pt; }
+      section { padding: 24px 0; }
+      h2, h3, summary { break-after: avoid; }
+      figure { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero" id="top">
+    <div class="hero-inner">
+      <p class="kicker">neuefische course project · NYC Green Taxi</p>
+      <h1>NYC Taxi Pipeline:<br>Engineering Decisions</h1>
+      <p class="intro">The steps I took, the challenges I faced, and what I would change.</p>
+      <div class="hero-meta"><span>Roy Grossman, AI Engineering Bootcamp</span><span>Python ETL and DuckDB / SQL ELT</span></div>
+    </div>
+  </header>
+  <nav class="nav" aria-label="Presentation sections">
+    <div class="nav-inner">
+      <a href="#opening">My focus</a><a href="#steps">1. Steps</a><a href="#challenges">2. Challenges</a><a href="#next">3. With more time</a>
+      <button id="visual-toggle" type="button" aria-expanded="false">Expand all</button>
+    </div>
+  </nav>
+  <main>
+    <section id="opening">
+      <h2>My engineering focus</h2>
+      <p>The goal was to build a daily revenue pipeline for NYC Green Taxi data. I focused on the engineering: <strong>clear objects, explicit data rules, and safe repeated runs</strong>.</p>
+    </section>
+    <section id="steps">
+      <h2>What steps did I take?</h2>
+      <p>I inspected the files and chose pickup date and recorded total charge for the daily report. Then I built <strong>small objects to download, calculate, and save it</strong>.</p>
+      <p><strong>I tested</strong> invalid records, download failures, and repeated runs. <strong>Docker packages the runtime. </strong> Prefect runs the same objects and shows where failures happen.</p>
+      <p>I also <strong>compared Python ETL with DuckDB/SQL ELT</strong>: calculate before saving, or load raw records first and calculate in the database. <strong>Both use the same rules.</strong></p>
+      <details class="visual-detail" id="demo">
+        <summary>Watch the pipeline run</summary>
+        <div class="visual"><figure>
+          <video controls playsinline preload="none" aria-label="Recorded pipeline run showing daily revenue and saved report files">
+            <source src="pipeline-demo.mp4" type="video/mp4">
+            <a href="pipeline-demo.mp4">Open the pipeline demo</a>
+          </video>
+          <figcaption>A recorded run showing the daily report and saved files. No audio.</figcaption>
+        </figure></div>
+      </details>
+      <details class="visual-detail">
+        <summary>See how ETL and ELT share the work</summary>
+        <div class="visual"><figure>
+          <img src="../assets/etl-elt-flow.svg" alt="Shared downloads feed Python ETL or DuckDB and SQL ELT. Both reuse the report writer and save to separate output folders.">
+          <figcaption><ul>
+            <li><strong>ETL:</strong> Python cleans the rides and calculates daily revenue.</li>
+            <li><strong>ELT:</strong> Load the rides into DuckDB first. SQL then cleans them and calculates daily revenue.</li>
+            <li><strong>Shared code:</strong> Both use the same downloader and report writer.</li>
+          </ul></figcaption>
+        </figure></div>
+      </details>
+    </section>
+    <section id="challenges">
+      <h2>What challenges did I face?</h2>
+      <details class="text-detail">
+        <summary>Data rules</summary>
+        <div class="detail-body"><p>Negative charges could be refunds or adjustments. Removing them would raise the total, so I <strong>kept negative and zero charges</strong> and documented why. The report measures <strong>recorded charges, not profit</strong>.</p></div>
+      </details>
+      <details class="text-detail">
+        <summary>Correctness</summary>
+        <div class="detail-body">
+          <p>A green Prefect run <strong>only means execution finished</strong>. I independently checked every daily count and amount, accounted for exclusions, and read saved reports back. <strong>Rerunning did not double the totals.</strong></p>
+          <p>About 146,000 rides produced 90 daily rows. ETL and ELT matched on the reviewed files. That shows <strong>consistency</strong>, not that every source record is correct.</p>
+        </div>
+      </details>
+      <details class="text-detail">
+        <summary>Simplicity</summary>
+        <div class="detail-body"><p>I wrote the download and save code once. <strong>ETL and ELT share it.</strong> ETL cleans and adds up the rides in Python. ELT first loads them into DuckDB, then SQL does that work. Both follow the same rules and use the same report writer. Prefect calls these existing objects.</p></div>
+      </details>
+      <details class="text-detail">
+        <summary>Choosing the tools</summary>
+        <div class="detail-body"><p>I started with Python because I could use familiar objects and tests for the whole pipeline. dbt would add another project and configuration to maintain for a small report. For the ELT comparison, I did use separate SQL files. <strong>DuckDB runs them directly, without dbt.</strong></p></div>
+      </details>
+      <details class="visual-detail">
+        <summary>See the runs in Prefect</summary>
+        <div class="visual">
+          <div class="tabs" role="group" aria-label="Choose a Prefect run">
+            <button type="button" data-run="etl" aria-pressed="true" aria-controls="etl-run">Python ETL</button>
+            <button type="button" data-run="elt" aria-pressed="false" aria-controls="elt-run">DuckDB / SQL ELT</button>
+          </div>
+          <figure id="etl-run">
+            <img src="../assets/prefect-pipeline-run.jpg" alt="The completed Python ETL run in Prefect.">
+            <figcaption><strong>ETL</strong><ul>
+              <li><strong>Download</strong> the taxi files.</li>
+              <li>Clean the rides and <strong>calculate daily revenue in Python</strong>.</li>
+              <li><strong>Check and save</strong> the reports.</li>
+            </ul></figcaption>
+          </figure>
+          <figure id="elt-run" hidden>
+            <img src="../assets/prefect-elt-run.jpg" alt="The completed DuckDB and SQL ELT run in Prefect.">
+            <figcaption><strong>ELT</strong><ul>
+              <li><strong>Download</strong> the taxi files.</li>
+              <li><strong>Load unchanged rides into DuckDB</strong>.</li>
+              <li>Use <strong>SQL</strong> to apply the rules and <strong>calculate daily revenue</strong>.</li>
+              <li><strong>Check and save</strong> the reports. Keep the raw records in the database.</li>
+            </ul></figcaption>
+          </figure>
+          <p>Prefect shows <strong>execution</strong>. I check the <strong>saved report separately</strong>.</p>
+        </div>
+      </details>
+    </section>
+    <section id="next">
+      <h2>What would I do differently with more time?</h2>
+      <h3>Keep a failed save from changing the previous report</h3>
+      <p>I would improve how the report files are saved. For example, the CSV might save successfully while the Parquet file fails, leaving files from different runs. I would prepare and check all the new files separately, then make the complete report available together. <strong>If saving fails, the previous report should stay untouched.</strong></p>
+      <h3>Choose between ETL and ELT based on evidence</h3>
+      <p>I would compare <strong>Python ETL and DuckDB/SQL ELT</strong> to decide which fits the project. I would measure processing time and resource use, then look at how the data moves and how easy each version is to change. The choice between ETL and ELT should come from <strong>numbers and the workflow, not feelings or assumptions</strong>.</p>
+    </section>
+    <section class="closing" id="takeaway">
+      <h2>The takeaway</h2>
+      <p>I thought most of the work would be getting the data through the pipeline. That turned out to be the easier part. The bigger challenges were <strong>organizing the code, testing failures, and getting the infrastructure working</strong> with Docker and Prefect. I also had to think about changing it later without breaking things.</p>
+      <p class="question">My biggest lesson was that a working pipeline is only the beginning. The harder part is choosing a design I can understand, test, and maintain without making every change a bigger job.</p>
+      <a class="back-top" href="#top">Back to the start ↑</a>
+    </section>
+  </main>
+  <footer><div class="footer-inner">
+    <div class="links"><a href="https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline">Project on GitHub</a><a href="README.md">Talk script</a><a href="../data-review.md">Independent checks</a><a href="../elt.md">ETL/ELT comparison</a></div>
+  </div></footer>
+  <script>
+    const visualDetails = [...document.querySelectorAll('details')];
+    const visualToggle = document.getElementById('visual-toggle');
+    function updateVisualToggle() {
+      const allOpen = visualDetails.every(detail => detail.open);
+      visualToggle.textContent = allOpen ? 'Collapse all' : 'Expand all';
+      visualToggle.setAttribute('aria-expanded', String(allOpen));
+    }
+    visualToggle.addEventListener('click', () => {
+      const open = !visualDetails.every(detail => detail.open);
+      visualDetails.forEach(detail => { detail.open = open; });
+      updateVisualToggle();
+    });
+    visualDetails.forEach(detail => detail.addEventListener('toggle', updateVisualToggle));
+    const demo = document.querySelector('video');
+    document.getElementById('demo').addEventListener('toggle', event => {
+      if (!event.currentTarget.open) demo.pause();
+    });
+    document.querySelectorAll('[data-run]').forEach(button => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('[data-run]').forEach(item => {
+          const selected = item === button;
+          item.setAttribute('aria-pressed', String(selected));
+          document.getElementById(`${item.dataset.run}-run`).hidden = !selected;
+        });
+      });
+    });
+    const links = [...document.querySelectorAll('.nav a')];
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          links.forEach(link => {
+            if (link.hash === `#${entry.target.id}`) link.setAttribute('aria-current', 'location');
+            else link.removeAttribute('aria-current');
+          });
+        });
+      }, {rootMargin: '-15% 0px -65% 0px'});
+      links.forEach(link => observer.observe(document.querySelector(link.hash)));
+    }
+  </script>
+</body>
+</html>
