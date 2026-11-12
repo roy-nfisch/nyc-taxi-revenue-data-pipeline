@@ -18,7 +18,7 @@ report) with **ELT** (load raw data, then transform it).
 This project began during the neue fische MLE course, which supplied the brief
 and a reference implementation. We built our own pipeline, tests and delivery setup.
 
-[Run locally](#run-locally) · [Run with Docker](#run-with-docker-and-prefect) · [Technology choices](#technologies-and-why-we-used-them) · [Tests](#run-the-checks)
+[Presentation](https://roy-nfisch.github.io/nyc-taxi-revenue-data-pipeline/docs/presentation/) · [Run locally](#run-locally) · [Run with Docker](#run-with-docker-and-prefect) · [Technology choices](#technologies-and-why-we-used-them) · [Tests](#run-the-checks)
 
 <p align="center">
   <a href="docs/assets/pipeline-demo.gif"><img src="docs/assets/pipeline-demo.gif" width="620" alt="Taxi pipeline demo showing accepted rides, daily revenue and saved reports"></a>

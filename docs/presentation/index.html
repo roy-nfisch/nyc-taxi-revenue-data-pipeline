@@ -61,6 +61,17 @@
     footer p { font-size: 15px; color: #d0d0d6; margin: 0 0 18px; }
     .links { display: flex; flex-wrap: wrap; gap: 14px 24px; font-size: 15px; }
     .back-top { display: inline-block; margin-top: 30px; font-size: 15px; }
+    .easter-egg { position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; overflow: hidden; border: 0; padding: 0; background: rgba(0, 0, 0, .95); color: #ffe36e; }
+    .easter-egg::backdrop { background: transparent; }
+    .egg-stage { height: 100%; padding: 0 30px; overflow: hidden; perspective: 1200px; background: radial-gradient(circle at 12% 24%, #fff 0 1px, transparent 2px), radial-gradient(circle at 77% 40%, #fff 0 1px, transparent 2px), radial-gradient(circle at 40% 80%, #aabbd3 0 1px, transparent 2px); background-size: 170px 180px, 230px 220px, 290px 250px; }
+    .egg-intro { position: absolute; inset: 0; display: grid; place-items: center; padding: 30px; color: #75d8eb; font-size: clamp(35.2px, 5.5vw, 77px); text-align: center; opacity: 0; animation: intro 4s ease-in-out both; }
+    .egg-crawl { text-align: center; transform-origin: 50% 100%; opacity: 0; animation: crawl 65s linear 4s forwards; }
+    .egg-crawl h2 { color: #ffe36e; font-size: clamp(63.8px, 8.8vw, 123.2px); margin-bottom: 38px; text-shadow: 0 2px 8px #000; }
+    .egg-crawl .egg-episode { font-size: clamp(35.2px, 4.4vw, 57.2px); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .egg-crawl p { margin: 0 auto 36px; color: #ffe36e; max-width: 1050px; font-size: clamp(33px, 3.96vw, 57.2px); line-height: 1.5; text-shadow: 0 2px 8px #000; }
+    .egg-static-intro { display: none; }
+    @keyframes intro { 0%, 100% { opacity: 0; } 20%, 75% { opacity: 1; } }
+    @keyframes crawl { from { opacity: 1; transform: translateY(115vh) rotateX(30deg); } to { opacity: 1; transform: translateY(-115%) rotateX(30deg); } }
     @media (max-width: 640px) {
       .hero-inner { padding: 44px 24px; }
       main { padding: 0 24px; }
@@ -76,6 +87,10 @@
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       details[open] > .detail-body, details[open] > .visual { animation: none; }
+      .egg-stage { overflow-y: auto; }
+      .egg-intro { display: none; }
+      .egg-static-intro { display: block; }
+      .egg-crawl { animation: none; transform: none; opacity: 1; padding: 32px 0; }
     }
     @media print {
       .nav, .tabs, .back-top { display: none; }
@@ -202,7 +217,63 @@
   <footer><div class="footer-inner">
     <div class="links"><a href="https://github.com/roy-nfisch/nyc-taxi-revenue-data-pipeline">Project on GitHub</a><a href="README.md">Talk script</a><a href="../data-review.md">Independent checks</a><a href="../elt.md">ETL/ELT comparison</a></div>
   </div></footer>
+  <dialog id="easter-egg" class="easter-egg" aria-labelledby="egg-title">
+    <audio id="egg-audio" preload="none" src="https://archive.org/download/tvtunes_7011/Star%20Wars%20-%20Main%20Theme.mp3"></audio>
+    <div class="egg-intro" aria-hidden="true">In a pipeline not so far away...</div>
+    <div class="egg-stage"><div class="egg-crawl">
+      <h2 id="egg-title">Data Wars</h2>
+      <p class="egg-episode">Episode I<br>The Pipeline Awakens</p>
+      <p class="egg-static-intro">In a pipeline not so far away...</p>
+      <p>Thousands of taxi rides await their destiny.</p>
+      <p>One engineer begins a mission: turn raw records into a daily revenue report.</p>
+      <p>But the journey is not without danger.</p>
+      <p>Negative charges appear. Downloads can fail. A successful run does not always mean a correct result.</p>
+      <p>Two rival empires offer different paths.</p>
+      <p>The <strong>ETL Empire</strong> transforms the rides in Python before saving the report.</p>
+      <p>The <strong>ELT Empire</strong> loads the raw rides into DuckDB first, then lets SQL do the work.</p>
+      <p>On the files reviewed, both paths produce the same result. But which one makes more sense for the mission?</p>
+      <p>And beyond them lies the greatest challenge of all: a pipeline that still makes sense when someone returns to it months later.</p>
+      <p>May the data guide your way.</p>
+    </div></div>
+  </dialog>
   <script>
+    const secretCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+    let codePosition = 0;
+    const egg = document.getElementById('easter-egg');
+    document.addEventListener('keydown', event => {
+      if (event.ctrlKey || event.altKey || event.metaKey || event.repeat || /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName) || event.target.isContentEditable) return;
+      const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+      codePosition = key === secretCode[codePosition] ? codePosition + 1 : Number(key === secretCode[0]);
+      if (codePosition === secretCode.length) {
+        codePosition = 0;
+        if (!egg.open) {
+          egg.showModal();
+          startMusic();
+        }
+      }
+    });
+    const eggAudio = document.getElementById('egg-audio');
+    let closeTimer = null;
+    function stopMusic() {
+      eggAudio.pause();
+      eggAudio.currentTime = 0;
+    }
+    function startMusic() {
+      eggAudio.play().catch(error => {
+        console.warn('Easter egg audio could not play:', error.message);
+      });
+    }
+    egg.addEventListener('click', () => egg.close());
+    egg.querySelector('.egg-crawl').addEventListener('animationend', event => {
+      if (event.animationName === 'crawl' && egg.open) {
+        closeTimer = setTimeout(() => { if (egg.open) egg.close(); }, 5000);
+      }
+    });
+    egg.addEventListener('close', () => {
+      clearTimeout(closeTimer);
+      closeTimer = null;
+      stopMusic();
+    });
     const visualDetails = [...document.querySelectorAll('details')];
     const visualToggle = document.getElementById('visual-toggle');
     function updateVisualToggle() {
