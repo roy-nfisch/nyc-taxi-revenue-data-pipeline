@@ -61,14 +61,16 @@
     footer p { font-size: 15px; color: #d0d0d6; margin: 0 0 18px; }
     .links { display: flex; flex-wrap: wrap; gap: 14px 24px; font-size: 15px; }
     .back-top { display: inline-block; margin-top: 30px; font-size: 15px; }
-    .easter-egg { position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; overflow: hidden; border: 0; padding: 0; background: rgba(0, 0, 0, .95); color: #ffe36e; }
+    .easter-egg { position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; overflow: hidden; border: 0; padding: 0; background: rgba(0, 0, 0, .95); color: #ffe81f; }
     .easter-egg::backdrop { background: transparent; }
     .egg-stage { height: 100%; padding: 0 30px; overflow: hidden; perspective: 1200px; background: radial-gradient(circle at 12% 24%, #fff 0 1px, transparent 2px), radial-gradient(circle at 77% 40%, #fff 0 1px, transparent 2px), radial-gradient(circle at 40% 80%, #aabbd3 0 1px, transparent 2px); background-size: 170px 180px, 230px 220px, 290px 250px; }
-    .egg-intro { position: absolute; inset: 0; display: grid; place-items: center; padding: 30px; color: #75d8eb; font-size: clamp(35.2px, 5.5vw, 77px); text-align: center; opacity: 0; animation: intro 4s ease-in-out both; }
+    .egg-intro { position: absolute; inset: 0; display: grid; place-items: center; padding: 30px; color: #4bd5ee; font-size: clamp(35.2px, 5.5vw, 77px); text-align: center; opacity: 0; animation: intro 4s ease-in-out both; }
     .egg-crawl { text-align: center; transform-origin: 50% 100%; opacity: 0; animation: crawl 65s linear 4s forwards; }
-    .egg-crawl h2 { color: #ffe36e; font-size: clamp(63.8px, 8.8vw, 123.2px); margin-bottom: 38px; text-shadow: 0 2px 8px #000; }
+    .egg-crawl h2 { color: #ffe81f; font-size: clamp(63.8px, 8.8vw, 123.2px); margin-bottom: 38px; text-shadow: 0 2px 8px #000; }
     .egg-crawl .egg-episode { font-size: clamp(35.2px, 4.4vw, 57.2px); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-    .egg-crawl p { margin: 0 auto 36px; color: #ffe36e; max-width: 1050px; font-size: clamp(33px, 3.96vw, 57.2px); line-height: 1.5; text-shadow: 0 2px 8px #000; }
+    .egg-crawl p { margin: 0 auto 39.6px; color: #ffe81f; max-width: 1050px; font-size: clamp(33px, 3.96vw, 57.2px); font-weight: 500; line-height: 1.5; text-shadow: 0 2px 8px #000; }
+    .egg-crawl .egg-credit { font-size: calc(clamp(33px, 3.96vw, 57.2px) * .8); font-style: italic; font-weight: 400; margin-bottom: calc(39.6px + 3em); }
+    .egg-crawl .egg-finale { margin-top: clamp(160px, 25vh, 360px); }
     .egg-static-intro { display: none; }
     @keyframes intro { 0%, 100% { opacity: 0; } 20%, 75% { opacity: 1; } }
     @keyframes crawl { from { opacity: 1; transform: translateY(115vh) rotateX(30deg); } to { opacity: 1; transform: translateY(-115%) rotateX(30deg); } }
@@ -221,8 +223,9 @@
     <audio id="egg-audio" preload="none" src="https://archive.org/download/tvtunes_7011/Star%20Wars%20-%20Main%20Theme.mp3"></audio>
     <div class="egg-intro" aria-hidden="true">In a pipeline not so far away...</div>
     <div class="egg-stage"><div class="egg-crawl">
-      <h2 id="egg-title">Data Wars</h2>
-      <p class="egg-episode">Episode I<br>The Pipeline Awakens</p>
+      <h2 id="egg-title">The Data Rebellion</h2>
+      <p class="egg-episode">Episode VII<br>The Pipeline Awakens</p>
+      <p class="egg-credit">A Honey Layers production.</p>
       <p class="egg-static-intro">In a pipeline not so far away...</p>
       <p>Thousands of taxi rides await their destiny.</p>
       <p>One engineer begins a mission: turn raw records into a daily revenue report.</p>
@@ -233,7 +236,7 @@
       <p>The <strong>ELT Empire</strong> loads the raw rides into DuckDB first, then lets SQL do the work.</p>
       <p>On the files reviewed, both paths produce the same result. But which one makes more sense for the mission?</p>
       <p>And beyond them lies the greatest challenge of all: a pipeline that still makes sense when someone returns to it months later.</p>
-      <p>May the data guide your way.</p>
+      <p class="egg-finale">May the data guide your way 📊</p>
     </div></div>
   </dialog>
   <script>
